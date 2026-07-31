@@ -298,6 +298,6 @@ export function wireTheme() {
     button.setAttribute("aria-pressed", dark ? "true" : "false");
     try { localStorage.setItem("sidcinema-theme", dark ? "dark" : "light"); } catch { /* ignore */ }
     const meta = document.getElementById("themeColor");
-    if (meta) meta.setAttribute("content", dark ? "#0d1117" : "#faf6fb");
+    if (meta) meta.setAttribute("content", dark ? "#0d1117" : "#fafbfd");
   });
 }

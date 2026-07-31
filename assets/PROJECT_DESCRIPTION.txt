@@ -310,17 +310,10 @@ the card was the one place that was not. This is the same rule that once let
 .wash veil the library, and css.test.mjs now checks every fallback-behind-image
 pair rather than just this one.
 
-Light is a pastel scheme, not a white one. It was white cards on near-white
-paper: nothing had a surface of its own and every panel needed a shadow to prove
-it existed. The paper is now a warm lilac-tinted blush, cards sit a shade above
-it, ink is a deep plum rather than a slate, and each tint is the pastel of its
-own meaning rather than grey. Shadows are tinted with the paper's own plum,
-because a neutral grey shadow over a pastel surface greys the pastel out and the
-whole scheme looks dusty. Green still only means watched and gold only queued,
-so the pastels are lighter statements of what those already meant and no colour
-picks up a second job. (--glass in the light theme was defined as var(--glass),
-which is circular and resolves to nothing; the header had no tint at all in
-light mode until this.)
+--glass in the light theme was defined as var(--glass), which refers to itself.
+A circular custom property is invalid, so the header and the search bar resolved
+to no background at all in light mode. It is white at 0.84 now, which is what
+the rest of the light scheme implies.
 
 Phone controls shrink by PADDING, never by font-size. Every one of them is a
 focusable form control and iOS zooms the whole page when one under 16px takes

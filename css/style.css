@@ -12,60 +12,53 @@
 [hidden] { display: none !important; }
 
 /* --- tokens: light --- */
-/* A pastel scheme, not a white one. The page was white card on near-white
-   paper, which reads as a blank document with things on it: nothing had a
-   surface of its own and every panel needed a shadow to prove it existed.
-   These are the same hues, held at low saturation and high lightness, so the
-   paper is a warm lilac-tinted blush, cards sit a shade above it in near-white
-   with a hint of the same warmth, and every tint is the pastel of its own
-   meaning rather than grey.
-   Green still only means watched, gold only queued or rated, raspberry only
-   interaction - the pastels are lighter statements of exactly those, so no
-   colour picks up a second job. */
 :root {
-  --paper:      #faf6fb;
-  --card:       #fffdff;
-  --tint:       #f6eff8;
-  --tint-2:     #efe6f3;
-  --line:       #ead9ea;
-  --line-soft:  #f4eaf5;
+  --paper:      #fafbfd;
+  --card:       #ffffff;
+  --tint:       #f2f5fa;
+  --tint-2:     #e9eef6;
+  --line:       #e2e8f1;
+  --line-soft:  #eff3f8;
 
-  /* Ink is a deep plum rather than a slate, so the text belongs to the same
-     family as the paper instead of sitting on it. Still 12:1 on --card. */
-  --ink:        #2b1f33;
-  --ink-soft:   #5f5170;
-  --muted:      #948aa0;
+  --ink:        #16202e;
+  --ink-soft:   #526072;
+  --muted:      #8a94a4;
 
-  --seen:       #3aa981;
-  --seen-deep:  #1f8262;
-  --seen-tint:  #e2f5ec;
-  --seen-wash:  #eefaf4;
+  --seen:       #0e9f6e;
+  --seen-deep:  #06805a;
+  --seen-tint:  #e4f7ef;
+  --seen-wash:  #f1fbf7;
 
-  --gold:       #c08a2e;
-  --gold-tint:  #fdf1dd;
-  --gold-line:  #f2dcb0;
-  --gold-ink:   #8a6114;
+  --gold:       #b57a12;
+  --gold-tint:  #fdf3e0;
+  --gold-line:  #f0d9a8;
+  --gold-ink:   #7a5308;
 
-  --accent:     #e0699b;
-  --accent-deep:#c44b7f;
-  --accent-tint:#fdeaf2;
+  --accent:     #e0457b;
+  --accent-deep:#c42e63;
+  --accent-tint:#fdedf3;
 
-  --danger:     #e0616a;
+  --danger:     #e5484d;
 
   /* Bare channels, for rgba() with a variable alpha. */
-  --seen-rgb:   58, 169, 129;
-  --accent-rgb: 224, 105, 155;
-  --shade-rgb:  63, 42, 74;
+  --seen-rgb:   14, 159, 110;
+  --accent-rgb: 224, 69, 123;
+  --shade-rgb:  22, 32, 46;
 
   /* Surfaces that are not simply --card. */
-  --wash-top:   #fdf7fb;
-  --glass:      rgba(255, 251, 254, 0.82);
-  --shimmer:    #fdf6fb;
-  --on-ink:     #fffdff;
+  --wash-top:   #ffffff;
+  /* Was written as var(--glass), which refers to itself: a circular custom
+     property is invalid, so the header and the search bar resolved to no
+     background at all in light mode. The value here is what the rest of the
+     light scheme implies - white, held just short of opaque so the blur behind
+     it has something to do. */
+  --glass:      rgba(255, 255, 255, 0.84);
+  --shimmer:    #ffffff;
+  --on-ink:     #ffffff;
   --on-accent:  #ffffff;
   --on-seen:    #ffffff;
-  --seen-bar:   #79cfae;
-  --fade-rgb:   255, 253, 255;
+  --seen-bar:   #46c79a;
+  --fade-rgb:   255, 255, 255;
 
   --radius-sm:  12px;
   --radius:     18px;
@@ -73,12 +66,9 @@
 
   --search-max: 720px;
 
-  /* Tinted with the paper's own plum rather than black. A neutral grey shadow
-     over a pastel surface greys the pastel out and the whole scheme looks
-     dusty. */
-  --shadow-sm:  0 1px 2px rgba(var(--shade-rgb), 0.045), 0 2px 8px rgba(var(--shade-rgb), 0.05);
-  --shadow:     0 2px 6px rgba(var(--shade-rgb), 0.05), 0 12px 28px -12px rgba(var(--shade-rgb), 0.16);
-  --shadow-lg:  0 4px 12px rgba(var(--shade-rgb), 0.07), 0 26px 50px -18px rgba(var(--shade-rgb), 0.22);
+  --shadow-sm:  0 1px 2px rgba(var(--shade-rgb), 0.05), 0 2px 6px rgba(var(--shade-rgb), 0.04);
+  --shadow:     0 2px 5px rgba(var(--shade-rgb), 0.05), 0 10px 24px -10px rgba(var(--shade-rgb), 0.14);
+  --shadow-lg:  0 4px 10px rgba(var(--shade-rgb), 0.06), 0 22px 44px -16px rgba(var(--shade-rgb), 0.2);
 
   --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --font-body:    "Manrope", -apple-system, "Segoe UI", system-ui, sans-serif;
@@ -4090,12 +4080,39 @@ body { overflow-x: clip; }
    and never zooms back out - so the text stays at 16 and the box shrinks
    around it. */
 @media (max-width: 600px) {
-  .scopepick__label { font-size: 9px; letter-spacing: 0.1em; }
-  .scopepick__select { padding: 8px 26px 8px 13px; }
-  .scopepick__caret { right: 11px; }
+  /* The label above the control, which is not focusable and so is free to be
+     as small as it reads. */
+  .scopepick__label { font-size: 8.5px; letter-spacing: 0.08em; }
+  .scopepick { gap: 7px; }
+  .scopepick__select { padding: 6px 22px 6px 11px; }
+  .scopepick__caret { right: 9px; width: 13px; height: 13px; margin-top: -6.5px; }
 
-  .segmented__btn { padding: 7px 5px; font-size: 11.5px; }
-  .sortfield select { padding: 8px 25px 8px 11px; }
+  /* Buttons, not fields. Nothing zooms when a button takes focus, so these are
+     the one part of the row whose TEXT can come down with the box. */
+  .segmented__btn { padding: 6px 4px; font-size: 10.5px; letter-spacing: 0; }
+  .segmented { border-radius: 999px; }
+
+  .sortfield { gap: 6px; }
+  .sortfield select { padding: 6px 22px 6px 10px; }
+
+  /* --- the library toolbar ---
+     Every label, caret and count shrinks. The two SELECTS and the search field
+     keep their 16px text and lose padding instead: iOS zooms the page whenever
+     a focused input or select is under 16px and never zooms back, and that is
+     the single worst thing that can happen to this page on a phone. If these
+     still read too large, the next lever is the width of .facets__label, not
+     the type inside the control. */
+  .collbar { gap: 8px; padding-bottom: 14px; }
+  .facets__label { width: auto; font-size: 8.5px; letter-spacing: 0.08em; padding-top: 0; }
+  .facets--inline .facets__wrap { padding: 0 28px 0 10px; }
+  .facets--inline .facets__select { padding: 7px 0; }
+  .facets__caret { right: 10px; width: 13px; height: 13px; margin-top: -6.5px; }
+
+  .collbar__search { padding: 0 10px; gap: 6px; }
+  .collbar__search input { padding: 8px 0; }
+  .collbar__search svg { width: 15px; height: 15px; }
+
+  .collbar__count { font-size: 10.5px; margin-bottom: 0; }
 }
 
 /* --- the portrait ---------------------------------------------------------
@@ -4108,14 +4125,16 @@ body { overflow-x: clip; }
   background: none;
   font: inherit;
   color: var(--accent-deep);
-  font-weight: 700;
+  /* Heavier than the line it sits in and no underline: the capitals and the
+     weight are enough to say it is pressable, and an underline in a footer
+     reads as one more link to the same page everything else links to. */
+  font-weight: 800;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  text-decoration: underline;
-  text-decoration-color: rgba(var(--accent-rgb), 0.45);
-  text-underline-offset: 3px;
-  transition: color 0.2s, text-decoration-color 0.2s;
+  text-decoration: none;
+  transition: color 0.2s, transform 0.2s var(--ease);
 }
-.footer__me:hover { color: var(--accent); text-decoration-color: var(--accent); }
+.footer__me:hover { color: var(--accent); transform: translateY(-1px); }
 .footer__me:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
 
 .portrait {
