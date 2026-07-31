@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- viewport-fit=cover lets env(safe-area-inset-*) report real values, which
+       keeps the header and the browse drawer clear of a notch rather than
+       tucked underneath one. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>SidCinema</title>
+  <meta name="description" content="Search movies and web series, and instantly see which ones I have already watched.">
+  <meta name="theme-color" content="#fafbfd" id="themeColor">
+
+  <script>
+    // Runs before the stylesheet paints, so a dark session never flashes white.
+    (function () {
+      var saved = null;
+      try { saved = localStorage.getItem("sidcinema-theme"); } catch (e) {}
+      var dark = saved ? saved === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+      document.documentElement.dataset.bsTheme = dark ? "dark" : "light";
+    })();
+  </script>
+
+  <link rel="icon" type="image/png" href="https://e1.pngegg.com/pngimages/974/699/png-clipart-movies-and-popcorn-folder-icon-movies-thumbnail.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://api.themoviedb.org">
+  <link rel="preconnect" href="https://image.tmdb.org">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+
+  <link rel="modulepreload" href="js/pages/search.js">
+  <link rel="modulepreload" href="js/config.js">
+</head>
+
+<body>
+  <div class="wash" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="wrap topbar__inner">
+      <a class="wordmark" href="index.html"
+         title="D&eacute;couverte de films &mdash; French for &ldquo;Movie Discovery&rdquo;">
+        <img class="wordmark__mark" src="assets/images/favicon.svg" alt="" aria-hidden="true" width="28" height="28">
+        <span class="wordmark__text"><span class="wordmark__long">D&eacute;couverte de films</span><span class="wordmark__brief">D&eacute;couverte</span><span class="wordmark__dot">.</span></span>
+        <span class="wordmark__gloss" aria-hidden="true">French for "Movie Discovery"</span>
+      </a>
+
+      <!-- Built by js/ui/nav.js from one list, so every page carries the same
+           destinations and adding one is a change in a single file. -->
+      <div class="topbar__tools" id="navTools"></div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="wrap hero__inner">
+      <p class="hero__eyebrow">Two thousand hours in &middot; still looking</p>
+      <h1 class="hero__title">Tonight's the night.<br><em>Something I haven't seen.</em></h1>
+
+      <div class="modeswitch" role="group" aria-label="Choose what to search">
+        <button type="button" class="modeswitch__btn is-active" data-media="movie">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 4v16M17 4v16M3 12h18"/>
+          </svg>
+          Movies
+        </button>
+        <button type="button" class="modeswitch__btn" data-media="tv">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="2" y="7" width="20" height="13" rx="3"/><path d="m8 3 4 4 4-4"/>
+          </svg>
+          Web series
+        </button>
+      </div>
+
+      <!-- One bar, one row. The magnifier submits, Enter submits, and the
+           dropdown says what the phrase IS - which is the other half of choosing
+           a TMDB endpoint. Options come from js/search/scope.js. -->
+      <form class="searchbox" id="searchForm" autocomplete="off" role="search">
+        <label class="visually-hidden" for="searchInput">Search</label>
+
+        <button class="searchbox__go" type="submit" aria-label="Search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </button>
+
+        <input class="searchbox__input" id="searchInput" type="search"
+               placeholder="Akshay Kumar movies, bollywood romantic movies&hellip;"
+               maxlength="160" aria-describedby="searchHint"
+               role="combobox" aria-expanded="false" aria-controls="peopleList"
+               aria-autocomplete="list" autocapitalize="off" spellcheck="false">
+
+        <button class="searchbox__clear" id="searchClear" type="button" hidden aria-label="Clear search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+
+        <div class="scopepick">
+          <label class="scopepick__label" for="scopeSelect">Search by</label>
+          <select class="scopepick__select" id="scopeSelect"></select>
+          <svg class="scopepick__caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+
+        <!-- Name suggestions from my own people sheet rather than TMDB. Only
+             shown under the Person scope, because that sheet is the only local
+             list the app holds. -->
+        <div class="acbox" id="peopleBox" hidden>
+          <ul class="acbox__list" id="peopleList" role="listbox" aria-label="Matching people"></ul>
+        </div>
+      </form>
+
+      <div class="suggestions" aria-label="Example searches">
+        <div class="suggestions__row" id="suggestions">
+          <span class="suggestions__label" id="searchHint">Try</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="wrap results" id="results">
+    <div class="toolbar" id="toolbar" hidden>
+      <div class="toolbar__head">
+        <div>
+          <!-- Above the headline on purpose. It answers "why am I looking at
+               this?", and an explanation printed underneath the thing it
+               explains has already been read too late. -->
+          <p class="toolbar__fixed" id="resultsCorrected" hidden></p>
+          <h2 class="toolbar__title" id="resultsHeadline">Trending this week</h2>
+        </div>
+
+        <div class="coverage" id="coverage" hidden>
+          <div class="coverage__numbers">
+            <span class="coverage__seen" id="coverageSeen">0</span>
+            <span class="coverage__of">of</span>
+            <span class="coverage__total" id="coverageTotal">0</span>
+            <span class="coverage__word">seen</span>
+          </div>
+          <div class="coverage__track" role="img" aria-label="Share of these results I have watched">
+            <div class="coverage__fill" id="coverageFill" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="activefilters" id="activeFilters" hidden></div>
+
+      <div class="toolbar__controls">
+        <div class="segmented" role="group" aria-label="Filter by watch status">
+          <button type="button" class="segmented__btn is-active" data-filter="all">All</button>
+          <button type="button" class="segmented__btn" data-filter="watched">Watched</button>
+          <button type="button" class="segmented__btn" data-filter="unwatched">Unwatched</button>
+        </div>
+
+        <label class="sortfield">
+          <span>Sort</span>
+          <select id="sortSelect" aria-label="Sort results">
+            <option value="relevance">Relevance</option>
+            <option value="rating">Rating</option>
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="alpha">A &ndash; Z</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="grid" id="skeletonGrid" hidden aria-hidden="true">
+      <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+      <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+      <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+      <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+    </div>
+
+    <div class="loading-line" id="loadingLine" hidden>
+      <span class="spinner" aria-hidden="true"></span>
+      <span id="loadingText">Reading the search&hellip;</span>
+    </div>
+
+    <div class="sections" id="resultSections" aria-live="polite"></div>
+
+    <div class="loadmore" id="loadMoreRow" hidden>
+      <button type="button" class="btn-ghost" id="loadMoreBtn">Load more</button>
+    </div>
+
+    <div class="state" id="stateBox" hidden>
+      <div class="state__icon" id="stateIcon" aria-hidden="true"></div>
+      <h3 class="state__title" id="stateTitle"></h3>
+      <p class="state__text" id="stateText"></p>
+      <button class="btn-ghost" id="stateAction" type="button" hidden></button>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer__inner">
+      <p class="footer__line">Thousands of Movies, one question: have I watched this one yet?</p>
+      <p class="footer__made">Made with <span class="footer__heart">&#128150;</span> by me</p>
+    </div>
+  </footer>
+
+  <div class="scrim" id="scrim" hidden></div>
+
+  <aside class="panel" id="filterPanel" hidden aria-label="Browse the catalogue">
+    <div class="panel__head">
+      <div>
+        <p class="panel__eyebrow">Browse</p>
+        <h2 class="panel__title">The whole catalogue</h2>
+      </div>
+      <button type="button" class="panel__close" id="panelClose" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <p class="panel__hint">Every title on TMDB, narrowed by what you pick. Nothing to type.</p>
+
+    <div class="panel__body" id="panelFields"></div>
+
+    <div class="panel__foot">
+      <button type="button" class="panel__clear" id="panelClear" hidden>Clear all</button>
+      <button type="button" class="panel__apply" id="panelApply">Show results</button>
+    </div>
+  </aside>
+
+  <div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+      <div class="modal-content detail">
+        <button type="button" class="detail__close" data-bs-dismiss="modal" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+        <div class="detail__body" id="detailBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+  <script type="module">
+    import { start } from "./js/pages/search.js";
+    start();
+  </script>
+</body>
+</html>

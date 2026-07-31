@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>My library &middot; SidCinema</title>
+  <meta name="description" content="Everything I have watched, with Favourites and Must watch.">
+  <meta name="theme-color" content="#fafbfd" id="themeColor">
+
+  <script>
+    (function () {
+      var saved = null;
+      try { saved = localStorage.getItem("sidcinema-theme"); } catch (e) {}
+      var dark = saved ? saved === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+      document.documentElement.dataset.bsTheme = dark ? "dark" : "light";
+    })();
+  </script>
+
+  <link rel="icon" type="image/png" href="https://e1.pngegg.com/pngimages/974/699/png-clipart-movies-and-popcorn-folder-icon-movies-thumbnail.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://image.tmdb.org">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="page-collection">
+  <div class="wash" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="wrap topbar__inner">
+      <a class="wordmark" href="index.html"
+         title="D&eacute;couverte de films &mdash; French for &ldquo;Movie Discovery&rdquo;">
+        <img class="wordmark__mark" src="assets/images/favicon.svg" alt="" aria-hidden="true" width="28" height="28">
+        <span class="wordmark__text"><span class="wordmark__long">D&eacute;couverte de films</span><span class="wordmark__brief">D&eacute;couverte</span><span class="wordmark__dot">.</span></span>
+        <span class="wordmark__gloss" aria-hidden="true">French for "Movie Discovery"</span>
+      </a>
+
+      <!-- Built by js/ui/nav.js from one list, so every page carries the same
+           destinations and adding one is a change in a single file. -->
+      <div class="topbar__tools" id="navTools"></div>
+    </div>
+  </header>
+
+  <main class="wrap coll">
+    <div class="coll__head">
+      <p class="coll__eyebrow" id="collEyebrow">My library</p>
+      <h1 class="coll__title" id="collTitle">Everything I have watched</h1>
+      <p class="coll__lead" id="collLead"></p>
+
+      <div class="stats" id="collStats"></div>
+      <div class="split" id="collSplit" hidden></div>
+    </div>
+
+    <div class="collbar">
+      <div class="collbar__search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <label class="visually-hidden" for="collSearch">Search my library</label>
+        <input id="collSearch" type="search" placeholder="Search my library&hellip;" autocomplete="off">
+        <button type="button" id="collClear" hidden aria-label="Clear">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <label class="facets facets--inline">
+        <span class="facets__label">Industry</span>
+        <span class="facets__wrap">
+          <select class="facets__select" id="collCategory"></select>
+          <svg class="facets__caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </span>
+      </label>
+
+      <label class="facets facets--inline">
+        <span class="facets__label">Genre</span>
+        <span class="facets__wrap">
+          <select class="facets__select" id="collGenre"></select>
+          <svg class="facets__caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </span>
+      </label>
+
+      <label class="facets facets--inline">
+        <span class="facets__label">Sort</span>
+        <span class="facets__wrap">
+          <select class="facets__select" id="collSort">
+            <option value="recent">Sheet order</option>
+            <option value="alpha">A &ndash; Z</option>
+            <option value="year">Newest first</option>
+            <option value="oldest">Oldest first</option>
+          </select>
+          <svg class="facets__caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </span>
+      </label>
+
+      <p class="collbar__count"><span id="collCount">0</span> shown</p>
+    </div>
+
+    <div class="loading-line" id="collLoading" hidden>
+      <span class="spinner" aria-hidden="true"></span>
+      <span>Reading the sheet&hellip;</span>
+    </div>
+
+    <div id="collGrid"></div>
+
+    <div class="loadmore" id="collMore" hidden>
+      <button type="button" class="btn-ghost" id="collMoreBtn">Show more</button>
+    </div>
+
+    <div class="state" id="collState" hidden>
+      <h3 class="state__title" id="collStateTitle"></h3>
+      <p class="state__text" id="collStateText"></p>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer__inner">
+      <p class="footer__line">Every title, one place.</p>
+    </div>
+  </footer>
+
+  <div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+      <div class="modal-content detail">
+        <button type="button" class="detail__close" data-bs-dismiss="modal" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+        <div class="detail__body" id="detailBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.PAGE_CONFIG = {
+      // Favourites and Must Watch live on this page. The watchlist has no such
+      // flags, so it gets no control.
+      views: true,
+      eyebrow: "My library",
+      title: "Everything I have watched",
+      emptyTitle: "Nothing in the library yet",
+      emptyText: "Search for something and mark it watched.",
+      noMatch: "No titles in my library fit this combination. Try clearing a filter.",
+      loadError: "Could not load my library"
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+  <script type="module">
+    import { start } from "./js/pages/collection.js";
+    start();
+  </script>
+</body>
+</html>

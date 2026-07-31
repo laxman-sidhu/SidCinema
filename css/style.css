@@ -1,0 +1,3952 @@
+/* Marquee - light and dark themes */
+/* Green is reserved: it only ever means "already watched". Gold is only for */
+/* ratings, raspberry only for interaction. */
+/* Every colour is a token. Adding [data-theme="dark"] overrides below is the */
+/* only thing needed to reskin the whole app, so never hardcode a hex here. */
+
+/* The browser's own [hidden] rule is a user-agent style, so any author rule
+   that sets display - .grid, .loading-line, .loadmore - silently outranks it
+   and the element keeps its box. Every hidden panel in this app carries such a
+   class, so without this the skeleton grid alone leaves ~1200px of blank space
+   under the toolbar at all times. */
+[hidden] { display: none !important; }
+
+/* --- tokens: light --- */
+:root {
+  --paper:      #fafbfd;
+  --card:       #ffffff;
+  --tint:       #f2f5fa;
+  --tint-2:     #e9eef6;
+  --line:       #e2e8f1;
+  --line-soft:  #eff3f8;
+
+  --ink:        #16202e;
+  --ink-soft:   #526072;
+  --muted:      #8a94a4;
+
+  --seen:       #0e9f6e;
+  --seen-deep:  #06805a;
+  --seen-tint:  #e4f7ef;
+  --seen-wash:  #f1fbf7;
+
+  --gold:       #b57a12;
+  --gold-tint:  #fdf3e0;
+  --gold-line:  #f0d9a8;
+  --gold-ink:   #7a5308;
+
+  --accent:     #e0457b;
+  --accent-deep:#c42e63;
+  --accent-tint:#fdedf3;
+
+  --danger:     #e5484d;
+
+  /* Bare channels, for rgba() with a variable alpha. */
+  --seen-rgb:   14, 159, 110;
+  --accent-rgb: 224, 69, 123;
+  --shade-rgb:  22, 32, 46;
+
+  /* Surfaces that are not simply --card. */
+  --wash-top:   #ffffff;
+  --glass:      var(--glass);
+  --shimmer:    #ffffff;
+  --on-ink:     #ffffff;
+  --on-accent:  #ffffff;
+  --on-seen:    #ffffff;
+  --seen-bar:   #46c79a;
+  --fade-rgb:   255, 255, 255;
+
+  --radius-sm:  12px;
+  --radius:     18px;
+  --radius-lg:  26px;
+
+  --search-max: 720px;
+
+  --shadow-sm:  0 1px 2px rgba(var(--shade-rgb), 0.05), 0 2px 6px rgba(var(--shade-rgb), 0.04);
+  --shadow:     0 2px 5px rgba(var(--shade-rgb), 0.05), 0 10px 24px -10px rgba(var(--shade-rgb), 0.14);
+  --shadow-lg:  0 4px 10px rgba(var(--shade-rgb), 0.06), 0 22px 44px -16px rgba(var(--shade-rgb), 0.2);
+
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body:    "Manrope", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --- tokens: dark --- */
+/* Set on <html> by the inline script in index.html before first paint. */
+[data-theme="dark"] {
+  --paper:      #0d1117;
+  --card:       #151b24;
+  --tint:       #1b2230;
+  --tint-2:     #232c3b;
+  --line:       #2a3444;
+  --line-soft:  #202836;
+
+  --ink:        #e9eef6;
+  --ink-soft:   #a7b3c4;
+  --muted:      #7e8998;
+
+  /* Lifted, because the light green disappears against a dark surface. */
+  --seen:       #2ec98f;
+  --seen-deep:  #56dda8;
+  --seen-tint:  #10322a;
+  --seen-wash:  #111d1c;
+
+  --gold:       #e3b25c;
+  --gold-tint:  #2b2214;
+  --gold-line:  #4c3c1e;
+  --gold-ink:   #f0cd8c;
+
+  --accent:     #f4638f;
+  --accent-deep:#ff85aa;
+  --accent-tint:#2e1622;
+
+  --danger:     #ff6369;
+
+  --seen-rgb:   46, 201, 143;
+  --accent-rgb: 244, 99, 143;
+  --shade-rgb:  0, 0, 0;
+
+  --wash-top:   #141c27;
+  --glass:      rgba(15, 20, 28, 0.84);
+  --shimmer:    #242e3d;
+  --on-ink:     #0d1117;
+  --on-accent:  #2a0a15;
+  --on-seen:    #052018;
+  --seen-bar:   #66e0b2;
+  --fade-rgb:   21, 27, 36;
+
+  /* Dark surfaces swallow soft shadows, so these lean on depth instead. */
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow:     0 2px 5px rgba(0, 0, 0, 0.45), 0 10px 24px -10px rgba(0, 0, 0, 0.7);
+  --shadow-lg:  0 4px 10px rgba(0, 0, 0, 0.5), 0 22px 44px -16px rgba(0, 0, 0, 0.85);
+
+  color-scheme: dark;
+}
+
+/* Themes cross-fade instead of snapping, but only while the toggle is armed, */
+/* so page load and hovers stay instant. */
+.is-theming, .is-theming * {
+  transition: background-color 0.32s var(--ease), border-color 0.32s var(--ease),
+              color 0.32s var(--ease) !important;
+}
+
+/* --- base --- */
+* { box-sizing: border-box; }
+
+/* --- overall scale -------------------------------------------------------
+   Everything was drawn a size too large: at 100% in a laptop browser the cards
+   and headings ate the screen, and the layout only came right once you zoomed
+   the browser out to about 70%. Rather than re-tune several hundred px values
+   one at a time - and get some of them wrong - the whole page is scaled by
+   that same factor, which is what the browser zoom was doing anyway.
+
+   `zoom` and not `transform: scale()`: zoom reflows, so the card grid gains
+   columns and text rewraps at the new size. A transform would shrink a fixed
+   layout and leave dead space around it.
+
+   Only on screens big enough to have the problem. Phones and tablets already
+   fit, and shrinking them further would make the text unreadable. Media
+   queries still measure the real viewport, so every breakpoint below is
+   unaffected, and fixed-position elements - the modal, the sticky header -
+   still fill the screen properly. Both verified in a browser.
+
+   One number, so it is easy to tune. */
+:root { --ui-scale: 0.7; }
+
+@media (min-width: 1024px) {
+  body { zoom: var(--ui-scale); }
+}
+
+body {
+  margin: 0;
+  /* 100vh on a phone means "the viewport with the browser chrome hidden", so
+     it is always taller than what is actually visible and leaves a dead strip
+     under the footer. dvh is the real number; vh stays as the fallback for
+     anything that does not know the unit. */
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  /* Stops iOS enlarging body text when the phone is turned to landscape,
+     which otherwise reflows the card grid mid-rotation. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-x: hidden;
+}
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Full-bleed container. Only the hero column is width-capped.
+   The max() is for a phone held sideways: the safe-area inset is the width of
+   the notch or the rounded corner, and without it the first card in every row
+   sits underneath one. On every other device both insets are 0 and this is
+   exactly the clamp it was before. */
+.wrap {
+  width: 100%;
+  padding-left: max(clamp(16px, 3.5vw, 56px), env(safe-area-inset-left));
+  padding-right: max(clamp(16px, 3.5vw, 56px), env(safe-area-inset-right));
+}
+
+/* Soft ambient wash behind the hero. */
+/* Bootstrap supplies this, but it arrives from a CDN. If that request is slow
+   or blocked, every "hidden" form label becomes visible text in the middle of
+   the layout - so it is defined here too. */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.wash {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 760px;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(70% 55% at 12% 0%, rgba(var(--accent-rgb), 0.09), transparent 68%),
+    radial-gradient(60% 50% at 88% 4%, rgba(var(--seen-rgb), 0.08), transparent 70%),
+    linear-gradient(180deg, var(--wash-top) 0%, var(--paper) 62%);
+}
+
+/* --- header --- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: var(--glass);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.topbar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 68px;
+}
+
+.wordmark { display: inline-flex; align-items: center; gap: 11px; }
+
+/* An image now, not a drawn ring. object-fit keeps a non-square source from
+   stretching, and the tinted background stands in if the remote file never
+   arrives, so the wordmark never collapses to bare text. */
+.wordmark__mark {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--tint);
+  border: 1px solid var(--line);
+}
+
+.wordmark__text {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+  /* The header is one row. A wordmark allowed to wrap takes the row height
+     with it and pushes the tools off the edge. */
+  white-space: nowrap;
+}
+/* Only the full stop is accented. It used to be "any span in here", which
+   stopped being specific enough once the name had two spellings. */
+.wordmark__dot { color: var(--accent); }
+.wordmark__brief { display: none; }
+
+.topbar__tools { display: inline-flex; align-items: center; gap: 9px; }
+
+.icon-btn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-soft);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s var(--ease);
+}
+.icon-btn:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
+}
+.icon-btn:active { transform: translateY(0); }
+
+/* A pill rather than a circle, because this one goes somewhere and the label
+   is what makes that obvious. The text drops on narrow screens; the icon and
+   the tooltip still carry the meaning. */
+.icon-btn--label {
+  width: auto;
+  gap: 8px;
+  grid-auto-flow: column;
+  padding: 0 15px 0 12px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+.icon-btn--label .icon-btn__text { white-space: nowrap; }
+.icon-btn--label:hover { color: var(--accent-deep); }
+.icon-btn--label[aria-current="page"] {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--accent-deep);
+}
+
+@media (max-width: 720px) {
+  .icon-btn--label { width: 38px; padding: 0; }
+  .icon-btn--label .icon-btn__text { display: none; }
+}
+.icon-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* A green pip means the watch history loaded; red means it did not. */
+.icon-btn__dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--seen);
+  border: 1.5px solid var(--card);
+}
+.icon-btn__dot[data-state="error"] { background: var(--danger); }
+.icon-btn.is-busy svg { animation: spin 0.9s linear infinite; }
+
+/* Only one of the two icons is ever mounted; the other is scaled out. */
+.theme-btn svg {
+  grid-area: 1 / 1;
+  transition: transform 0.4s var(--ease), opacity 0.25s;
+}
+.theme-btn__moon { transform: rotate(0deg) scale(1); opacity: 1; }
+.theme-btn__sun  { transform: rotate(-70deg) scale(0.4); opacity: 0; }
+[data-theme="dark"] .theme-btn__moon { transform: rotate(70deg) scale(0.4); opacity: 0; }
+[data-theme="dark"] .theme-btn__sun  { transform: rotate(0deg) scale(1); opacity: 1; }
+.theme-btn:hover { color: var(--gold); border-color: var(--gold); }
+
+/* --- hero --- */
+.hero {
+  position: relative;
+  /* Above .results, which is also positioned and comes later in the document.
+     While both sat at z-index 1 the later one won, and since the suggestion
+     dropdown is sealed inside this element's stacking context it could never
+     climb out - the divider line, the headline and the first row of cards all
+     painted straight over it, however high its own z-index went. Ranking the
+     two sections is what actually decides it. Still well under the sticky
+     header at 60, which should keep winning. */
+  z-index: 20;
+  padding: clamp(40px, 6vw, 82px) 0 44px;
+}
+
+.hero__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.hero__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 18px;
+}
+
+.hero__title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(38px, 5.6vw, 70px);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  margin: 0 0 20px;
+}
+.hero__title em {
+  font-style: normal;
+  color: var(--muted);
+}
+
+
+/* Movies or series. Sets what the next search looks through. */
+.modeswitch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 5px;
+  margin-bottom: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--glass);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  box-shadow: var(--shadow-sm);
+}
+
+.modeswitch__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 10px 22px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.25s var(--ease);
+}
+.modeswitch__btn svg { width: 16px; height: 16px; }
+.modeswitch__btn:hover { color: var(--ink); }
+.modeswitch__btn.is-active {
+  background: var(--ink);
+  color: var(--on-ink);
+  box-shadow: 0 5px 14px -7px rgba(var(--shade-rgb), 0.8);
+}
+
+/* Search by, inside the bar.
+   It was a row of buttons above the input, which made the hero ask two
+   questions of equal size before you could type anything. As a dropdown it
+   reads as what it is: a setting on the search, not a decision before it. */
+.scopepick {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  margin-left: 4px;
+  border-left: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.scopepick__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.scopepick__select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  /* The solid accent the Search button used to wear. That button is gone -
+     the magnifier submits now - so the colour moves to the control that took
+     its place, and the right-hand end of the bar keeps the weight it had. */
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 10px 32px 10px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 6px 16px -6px rgba(var(--accent-rgb), 0.6);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.scopepick__select:hover {
+  background: var(--accent-deep);
+  box-shadow: 0 10px 22px -8px rgba(var(--accent-rgb), 0.7);
+}
+.scopepick__select:focus-visible {
+  outline: 2px solid var(--accent-deep);
+  outline-offset: 2px;
+}
+/* The dropdown list itself is drawn by the OS, which does not inherit the
+   accent - so the options are set back to normal page colours or they can
+   land as white-on-white. */
+.scopepick__select option {
+  background: var(--card);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.scopepick__caret {
+  position: absolute;
+  right: 12px;
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: var(--on-accent);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+/* The magnifier submits now, so it is a button rather than decoration. */
+.searchbox__go {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.searchbox__go svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.searchbox__go:hover { background: var(--accent-tint); color: var(--accent-deep); }
+.searchbox__go:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.searchbox {
+  position: relative;
+  /* The suggestion dropdown lives inside this box, and `backdrop-filter`
+     below makes the box its own stacking context - so the dropdown's z-index
+     only ranks it against its siblings IN HERE and cannot lift it over
+     anything outside. The example chips below carry a mask-image, which is
+     also a stacking context, and being later in the document they were
+     painting straight over the top of the dropdown: the names were visible
+     but every tap landed on a chip. This z-index ranks the two boxes against
+     each other, which is the comparison that actually decides it. */
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: var(--search-max);
+  padding: 9px 9px 9px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--glass);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  box-shadow: var(--shadow);
+  transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+.searchbox:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-lg), 0 0 0 4px var(--accent-tint);
+}
+
+
+.searchbox__input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: clamp(15px, 1.4vw, 16.5px);
+  padding: 13px 0;
+  outline: none;
+  text-align: left;
+}
+.searchbox__input::placeholder { color: var(--muted); }
+.searchbox__input::-webkit-search-cancel-button { display: none; }
+
+.searchbox__clear {
+  border: 0;
+  background: var(--tint);
+  color: var(--ink-soft);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex: none;
+}
+.searchbox__clear svg { width: 15px; height: 15px; }
+.searchbox__clear:hover { background: var(--tint-2); color: var(--ink); }
+
+/* --- name autocomplete ---
+   Anchored to the bar rather than the page, so it stays put when the bar wraps
+   on a narrow screen. z-index sits above the hero but below the header, which
+   is sticky and has to keep winning. */
+.acbox {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--card);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: acdrop 0.16s var(--ease) both;
+}
+
+@keyframes acdrop {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.acbox__list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  max-height: min(46vh, 340px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.acbox__item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink-soft);
+  transition: background 0.14s, color 0.14s;
+}
+
+/* One highlight style for both the pointer and the arrow keys, so the list
+   never shows two different "current" rows at once. */
+.acbox__item:hover,
+.acbox__item.is-active {
+  background: var(--accent-tint);
+  color: var(--accent-deep);
+}
+
+.acbox__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The letters actually typed. Bolder, not coloured - colour here would fight
+   the row highlight. */
+.acbox__name b { font-weight: 800; color: inherit; }
+.acbox__item:hover .acbox__name,
+.acbox__item.is-active .acbox__name { color: var(--accent-deep); }
+
+.suggestions {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin-top: 22px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+}
+.suggestions::-webkit-scrollbar { display: none; }
+
+/* While the name dropdown is open the chips underneath it are both redundant
+   and in the way. Hidden rather than removed, so the hero does not jump a row
+   taller and shorter on every keystroke. */
+body.is-suggesting .suggestions {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.suggestions__row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  margin: 0 auto;
+  padding: 2px 24px;
+}
+.suggestions__label {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-right: 4px;
+}
+
+.chip {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: color 0.18s, border-color 0.18s, background 0.18s, transform 0.18s var(--ease);
+}
+.chip:hover {
+  color: var(--accent-deep);
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  transform: translateY(-2px);
+}
+
+.note {
+  margin-top: 30px;
+  padding: 15px 19px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-soft);
+  font-size: 14px;
+  text-align: left;
+  /* The hero is a centred flex column, so children shrink-to-fit rather than
+     stretch. Without width:100% this box sizes to its max-width and hangs off
+     both edges of a narrow screen. */
+  width: 100%;
+  max-width: 760px;
+  overflow-wrap: anywhere;
+  box-shadow: var(--shadow-sm);
+}
+.note--warn {
+  border-color: var(--gold-line);
+  background: var(--gold-tint);
+  color: var(--gold-ink);
+}
+.note code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  background: rgba(var(--shade-rgb), 0.07);
+  padding: 2px 6px;
+  border-radius: 5px;
+  color: var(--ink);
+}
+
+/* --- toolbar --- */
+.results { position: relative; z-index: 1; padding-bottom: 80px; }
+
+.toolbar {
+  border-top: 1px solid var(--line);
+  padding-top: 28px;
+  margin-bottom: 26px;
+}
+
+.toolbar__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.toolbar__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(23px, 2.4vw, 32px);
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+/* The "did you mean" line.
+   Green because green already means "this is resolved" everywhere else in the
+   app, and a correction that worked is exactly that. Centred and set on its
+   own row above the headline so it reads as a short announcement rather than
+   a caption hanging off the title. */
+.toolbar__fixed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(var(--seen-rgb), 0.32);
+  background: var(--seen-tint);
+  color: var(--seen-deep);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: center;
+}
+.toolbar__fixed::before {
+  content: "\2713";
+  flex: none;
+  font-weight: 800;
+  color: var(--seen);
+}
+/* The name that was actually searched. The rest of the sentence is context;
+   this is the part worth reading. */
+.toolbar__fixed b { font-weight: 800; }
+
+/* How much of this result set is already watched. */
+.coverage { min-width: 210px; }
+
+.coverage__numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-family: var(--font-mono);
+  margin-bottom: 9px;
+}
+.coverage__seen  { font-size: 26px; font-weight: 700; color: var(--seen-deep); line-height: 1; }
+.coverage__of    { font-size: 12px; color: var(--muted); }
+.coverage__total { font-size: 15px; color: var(--ink-soft); }
+.coverage__word  { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.14em; }
+
+.coverage__track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--tint-2);
+  overflow: hidden;
+}
+.coverage__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--seen-bar), var(--seen));
+  transition: width 0.6s var(--ease);
+}
+
+.toolbar__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 4px;
+  gap: 2px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+}
+.segmented__btn {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.18s, background 0.18s;
+}
+.segmented__btn:hover { color: var(--ink); }
+.segmented__btn.is-active { background: var(--ink); color: var(--on-ink); }
+.segmented__btn[data-filter="watched"].is-active { background: var(--seen); color: var(--on-seen); }
+
+.sortfield {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sortfield select {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 9px 15px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+.sortfield select:hover { border-color: var(--muted); }
+
+
+.hamburger.is-active { border-color: var(--accent); background: var(--accent-tint); color: var(--accent-deep); }
+/* --- browse panel --- */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(var(--shade-rgb), 0.42);
+  opacity: 0;
+  transition: opacity 0.26s var(--ease);
+}
+.scrim.is-open { opacity: 1; }
+
+.panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 61;
+  width: min(340px, 88vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border-right: 1px solid var(--line);
+  box-shadow: var(--shadow-lg);
+  transform: translateX(-100%);
+  transition: transform 0.28s var(--ease);
+}
+.panel.is-open { transform: translateX(0); }
+
+.panel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px 20px 0;
+}
+
+.panel__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 4px;
+}
+
+.panel__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 21px;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.panel__close {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.panel__close svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.panel__close:hover { color: var(--accent-deep); border-color: var(--accent); }
+
+.panel__hint {
+  padding: 10px 20px 0;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.panel__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel__foot {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.panel__clear,
+.panel__apply {
+  flex: 1 1 auto;
+  border-radius: 999px;
+  padding: 11px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.18s, border-color 0.18s, color 0.18s;
+}
+.panel__clear {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-soft);
+}
+.panel__clear:hover { color: var(--accent-deep); border-color: var(--accent); }
+.panel__apply {
+  border: 0;
+  background: var(--ink);
+  color: var(--on-ink);
+}
+.panel__apply:hover { opacity: 0.88; }
+
+/* --- active filter chips --- */
+.activefilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.loadmore {
+  display: flex;
+  justify-content: center;
+  margin-top: 36px;
+}
+
+/* Cards added by "Load more" animate individually. The page-load stagger is
+   deliberately not reused: it delays the last card by half a second, which on
+   an append reads as lag rather than polish. */
+.card.is-new { animation: rise 0.34s var(--ease) both; animation-delay: 0ms; }
+
+/* --- result sections --- */
+.sections { display: flex; flex-direction: column; gap: 44px; }
+
+/* A filter change keeps the current cards on screen and just dims them, so a
+   fast round trip does not read as a full page reload. */
+.sections.is-refreshing {
+  opacity: 0.45;
+  pointer-events: none;
+  transition: opacity 0.18s var(--ease);
+}/* Upcoming titles: dated, not yet watchable, so gold rather than green.
+   Sits opposite the watched badge, which owns the top-left corner. */
+.card__soon {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--gold-line);
+  background: var(--gold-tint);
+  color: var(--gold-ink);
+}
+
+.card__release {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--gold-ink);
+  margin: 0 0 6px;
+}
+
+/* --- grid and cards --- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 22px;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--card);
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.32s var(--ease), border-color 0.28s, box-shadow 0.32s var(--ease);
+  animation: rise 0.5s var(--ease) both;
+}
+.card:hover {
+  transform: translateY(-6px);
+  border-color: var(--tint-2);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Watched: a solid green edge plus a green wash across the whole card. */
+.card.is-watched {
+  border: 2px solid var(--seen);
+  background:
+    linear-gradient(180deg, rgba(var(--seen-rgb), 0.16) 0%, rgba(var(--seen-rgb), 0.06) 42%, rgba(var(--seen-rgb), 0) 78%),
+    var(--seen-wash);
+  box-shadow: 0 0 0 4px rgba(var(--seen-rgb), 0.11), 0 12px 26px -16px rgba(6, 128, 90, 0.65);
+}
+.card.is-watched:hover {
+  border-color: var(--seen-deep);
+  box-shadow: 0 0 0 5px rgba(var(--seen-rgb), 0.16), 0 26px 48px -20px rgba(6, 128, 90, 0.7);
+}
+
+.card__poster {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  background: var(--tint);
+}
+.card__poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.6s var(--ease);
+}
+.card:hover .card__poster img { transform: scale(1.06); }
+
+.card__noposter {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 20px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.card__badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px 5px 8px;
+  border-radius: 999px;
+  background: var(--seen);
+  color: var(--on-seen);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 12px -4px rgba(6, 128, 90, 0.75);
+}
+.card__badge svg { width: 12px; height: 12px; stroke-width: 3; }
+
+/* --- what my own list calls it -------------------------------------------
+   Only on watched cards. TMDB's title and my sheet's Name often differ - a
+   regional release, a transliteration, a franchise numbered differently - and
+   the sheet's version is the one I recognise.
+
+   Two ways in, because there are two kinds of device. On a pointer device it
+   appears on hover, which costs nothing and needs no button. On a touch screen
+   hover does not exist, so the (i) toggles it. The button is always in the DOM
+   and only hidden from pointer devices, so the two never disagree. */
+.card__note {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(12, 16, 24, 0.6);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.18s var(--ease);
+}
+.card__note svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.card__note:hover { background: var(--accent-deep); transform: scale(1.08); }
+.card__note:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Anchored to the TOP of the poster. It used to sit at the bottom, which is
+   now where the four action buttons live - the two overlapped, and the tip
+   covered the buttons the moment a watched card was hovered. */
+.card__notetip {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 8px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 11px;
+  padding-right: 40px;          /* clear of the (i) button in the corner */
+  border-radius: var(--radius-sm);
+  background: rgba(12, 16, 24, 0.94);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+}
+
+.card__notetip-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.card__notetip-source {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Tap-to-open. Works on every device, so it is the base state. */
+.card__note[aria-expanded="true"] + .card__notetip {
+  opacity: 1;
+  transform: translateY(0);
+}
+/* Above the badge, which shares the top-left corner. */
+.card__note[aria-expanded="true"] ~ .card__badge { opacity: 0; }
+.card__note[aria-expanded="true"] { background: var(--accent-deep); }
+
+/* Hover only where hovering is possible. A touch screen reporting no hover
+   keeps the button; a mouse gets the tooltip for free and the button fades
+   back so it does not clutter every watched poster. */
+@media (hover: hover) and (pointer: fine) {
+  .card:hover .card__notetip { opacity: 1; transform: translateY(0); }
+  .card__note { opacity: 0; transition: opacity 0.18s, background 0.18s; }
+  .card:hover .card__note,
+  .card__note:focus-visible { opacity: 1; }
+}
+
+.card__body { padding: 15px 16px 17px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+
+.card__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.24;
+  letter-spacing: -0.015em;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card__facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+.card__facts .dot { color: var(--line); }
+
+.card__genres { display: flex; flex-wrap: wrap; gap: 5px; }
+.card__genre {
+  font-size: 10.5px;
+  padding: 3px 9px;
+  border-radius: 7px;
+  background: var(--tint);
+  color: var(--ink-soft);
+}
+.card.is-watched .card__genre {
+  background: rgba(var(--seen-rgb), 0.11);
+  color: var(--seen-deep);
+}
+
+.card__overview {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* The rating lives here rather than on the poster, so artwork stays clean. */
+.card__meta {
+  margin-top: auto;
+  padding-top: 11px;
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.card.is-watched .card__meta { border-top-color: rgba(var(--seen-rgb), 0.24); }
+
+
+.skeleton {
+  border-radius: var(--radius);
+  border: 1px solid var(--line-soft);
+  background: linear-gradient(100deg, var(--tint) 30%, var(--shimmer) 50%, var(--tint) 70%);
+  background-size: 260% 100%;
+  animation: shimmer 1.5s linear infinite;
+  aspect-ratio: 2 / 3.5;
+}
+
+.loading-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink-soft);
+  font-size: 14px;
+  padding: 30px 0 8px;
+}
+.spinner {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 2px solid var(--tint-2);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+  flex: none;
+}
+
+/* --- empty and error states --- */
+.state { text-align: center; padding: 76px 24px; }
+.state__icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 22px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  color: var(--muted);
+}
+.state__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 21px;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+}
+.state__text { color: var(--muted); font-size: 14.5px; margin: 0 auto 22px; max-width: 520px; }
+
+.btn-ghost {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 11px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s, transform 0.18s var(--ease);
+}
+.btn-ghost:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+/* --- detail modal --- */
+.modal-backdrop.show { opacity: 0.5; }
+
+.detail {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.detail__close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 5;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(18, 24, 34, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+.detail__close svg { width: 17px; height: 17px; stroke-width: 2.2; }
+.detail__close:hover { background: rgba(18, 24, 34, 0.78); }
+
+/* Bootstrap expects a .modal-body to own scrolling; this layout has none. */
+.detail__body {
+  display: block;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--tint-2) transparent;
+}
+.detail__body::-webkit-scrollbar { width: 10px; }
+.detail__body::-webkit-scrollbar-track { background: transparent; }
+.detail__body::-webkit-scrollbar-thumb {
+  background: var(--tint-2);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+/* The backdrop stays fully visible; only its bottom edge fades into the page, */
+/* and no text is ever laid over the image. */
+.detail__hero {
+  position: relative;
+  height: clamp(200px, 26vw, 340px);
+  background-size: cover;
+  background-position: center 25%;
+  background-color: #101722;
+}
+.detail__hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(var(--fade-rgb), 0) 0%,
+    rgba(var(--fade-rgb), 0) 52%,
+    rgba(var(--fade-rgb), 0.3) 76%,
+    rgba(var(--fade-rgb), 0.86) 93%,
+    rgb(var(--fade-rgb)) 100%
+  );
+}
+.detail__hero.is-blank {
+  background-image:
+    radial-gradient(60% 90% at 20% 0%, rgba(var(--accent-rgb), 0.35), transparent 70%),
+    radial-gradient(60% 90% at 85% 10%, rgba(var(--seen-rgb), 0.32), transparent 72%);
+}
+
+.detail__head {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  gap: 26px;
+  padding: 0 34px;
+}
+
+/* Only the poster overlaps the backdrop, so every line of text sits on a */
+/* plain background and stays readable. */
+.detail__poster {
+  position: relative;
+  flex: none;
+  align-self: flex-start;
+  display: grid;
+  place-items: center;
+  width: 190px;
+  aspect-ratio: 2 / 3;
+  margin-top: -104px;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-lg);
+  background: var(--tint);
+}
+
+.detail__poster img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.detail__poster.is-watched {
+  border: 2px solid var(--seen);
+  box-shadow: 0 0 0 4px rgba(var(--seen-rgb), 0.18), var(--shadow-lg);
+}
+
+.detail__headline { padding-bottom: 4px; min-width: 0; }
+
+.detail__kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.detail__title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(26px, 3vw, 40px);
+  line-height: 1.06;
+  letter-spacing: -0.03em;
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+.detail__original { color: var(--muted); font-style: italic; margin: 0 0 12px; font-size: 14px; }
+.detail__tagline { color: var(--ink-soft); font-size: 15px; margin: 0 0 14px; }
+
+.detail__facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-bottom: 16px;
+}
+.detail__facts .dot { color: var(--line); }
+.detail__facts .rating { color: var(--gold); font-weight: 700; }
+
+.detail__seen {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  background: var(--seen-tint);
+  border: 1px solid rgba(var(--seen-rgb), 0.4);
+  color: var(--seen-deep);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.detail__seen svg { width: 13px; height: 13px; stroke-width: 3; }
+
+.detail__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 12px 24px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--card);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s, transform 0.18s var(--ease);
+}
+.btn-outline:hover { border-color: var(--muted); transform: translateY(-1px); }
+.btn-outline svg { width: 15px; height: 15px; }
+
+.detail__main { padding: 30px 34px 36px; }
+
+.detail__section { margin-top: 30px; }
+.detail__section:first-child { margin-top: 0; }
+
+.detail__label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+
+.detail__overview { font-size: 15.5px; line-height: 1.72; color: var(--ink-soft); margin: 0; }
+
+
+.detail__loading { padding: 90px 30px; text-align: center; color: var(--muted); }
+
+/* --- footer --- */
+.footer {
+  border-top: 1px solid var(--line);
+  padding: 30px 0 46px;
+  position: relative;
+  z-index: 1;
+  background: var(--card);
+}
+.footer__inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--muted);
+}
+.footer p { margin: 0; }
+.footer__line { font-family: var(--font-display); font-size: 14.5px; color: var(--ink-soft); }
+.footer__made { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.footer__heart { font-size: 15px; display: inline-block; animation: beat 2.4s var(--ease) infinite; }
+
+/* =========================================================================
+   RESPONSIVE
+   The desktop layout is scaled down by `zoom` above 1024px, so everything
+   below that breakpoint is drawn at 1:1 and has to be tuned on its own terms
+   rather than inherited from a shrunken desktop. Three sizes matter:
+
+     991px  tablets and small laptops - the detail modal stops being wide
+     767px  phones held either way    - one column of controls, two of cards
+     480px  small phones              - the short wordmark, the tightest grid
+
+   Written mobile-last on purpose: the desktop rules above are the ones that
+   were already right, and overriding them downwards is a smaller and safer
+   change than re-basing the whole sheet.
+   ========================================================================= */
+
+@media (max-width: 991px) {
+  .detail__head { padding: 0 24px; gap: 20px; }
+  .detail__poster { width: 150px; margin-top: -84px; }
+  .detail__main { padding: 26px 24px 32px; }
+}
+
+/* --- phones ------------------------------------------------------------- */
+@media (max-width: 767px) {
+
+  /* iOS zooms the whole page whenever a focused field is under 16px, and
+     never zooms back out. Every typeable control is pinned to 16px here for
+     that one reason - it is the single biggest thing that made this feel
+     unfinished on a phone. */
+  .searchbox__input,
+  .scopepick__select,
+  .sortfield select,
+  .panelfield select { font-size: 16px; }
+
+  /* --- header --- */
+  .topbar__inner { height: 58px; }
+  .hamburger { width: 36px; height: 36px; margin-right: 8px; border-radius: 11px; }
+  .hamburger svg { width: 18px; height: 18px; }
+  .icon-btn { width: 36px; height: 36px; }
+  .topbar__tools { gap: 7px; }
+  .wordmark { gap: 9px; }
+  .wordmark__mark { width: 25px; height: 25px; }
+  .wordmark__text { font-size: 16.5px; }
+
+  /* --- hero ---
+     Everything above the results is an introduction, and on a phone it was
+     costing most of the first screen before a single poster appeared. Each
+     piece steps down a little and the gaps between them close up, so the
+     grid starts higher without the hero looking cramped. */
+  .hero { padding: 20px 0 24px; }
+  .hero__eyebrow { font-size: 9.5px; letter-spacing: 0.14em; margin-bottom: 10px; }
+  .hero__title { font-size: clamp(25px, 7vw, 34px); line-height: 1.1; margin-bottom: 16px; }
+
+  .modeswitch { width: 100%; max-width: 340px; margin-bottom: 14px; padding: 4px; }
+  .modeswitch__btn {
+    flex: 1;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 10px;
+    font-size: 12.5px;
+  }
+  .modeswitch__btn svg { width: 15px; height: 15px; }
+
+  /* The bar wraps at 767 rather than 420. Between those two widths the scope
+     dropdown, its label and the input were sharing one line, which left the
+     input about eight characters wide on a large phone - technically laid out,
+     practically unusable. Two full-width rows instead: type on the first,
+     choose what you are typing on the second. */
+  .searchbox {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: var(--radius-lg);
+  }
+  .searchbox__input { flex: 1 1 auto; padding: 11px 0; }
+  .searchbox__go { width: 38px; height: 38px; }
+
+  .scopepick {
+    order: 3;
+    width: 100%;
+    justify-content: space-between;
+    gap: 10px;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    margin: 0;
+    padding: 9px 2px 1px;
+  }
+  .scopepick__select {
+    flex: 1 1 auto;
+    padding: 11px 34px 11px 16px;
+    text-align: left;
+  }
+  .scopepick__caret { right: 14px; }
+
+  /* 30px was a mouse target. A finger needs the whole 40. */
+  .searchbox__clear { width: 34px; height: 34px; }
+  .searchbox__clear svg { width: 16px; height: 16px; }
+
+  .acbox__item { padding: 12px; }
+  .acbox__name { font-size: 15px; }
+  /* Role and industry are nice-to-know, and the first thing to go when the
+     row has to hold a full name on a 360px screen. */
+  .acbox__meta { display: none; }
+
+  .searchbox__input::placeholder { font-size: 14px; }
+  .suggestions { margin-top: 13px; }
+  .suggestions__label { font-size: 10px; }
+  .chip { padding: 8px 13px; font-size: 12px; }
+  .note { margin-top: 18px; padding: 12px 14px; font-size: 13px; }
+
+  .toolbar__fixed { font-size: 12.5px; padding: 9px 13px; margin-bottom: 10px; }
+
+  /* --- toolbar --- */
+  .toolbar { padding-top: 22px; margin-bottom: 20px; }
+  .toolbar__head { align-items: flex-start; gap: 16px; }
+  .toolbar__title { font-size: 21px; }
+  .toolbar__fixed { font-size: 12.5px; line-height: 1.45; }
+
+  /* Full width and horizontal, so the bar reads as a bar instead of a
+     narrow column pinned to one side of the heading. */
+  .coverage {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .coverage__numbers { margin-bottom: 0; flex: none; }
+  .coverage__seen { font-size: 21px; }
+  .coverage__track { flex: 1 1 auto; }
+
+  .toolbar__controls { margin-top: 16px; gap: 10px; }
+
+  /* The three status buttons share the row evenly rather than clustering at
+     one end and leaving the sort control stranded. */
+  .segmented { flex: 1 1 auto; }
+  .segmented__btn { flex: 1; padding: 9px 8px; font-size: 12.5px; }
+  .sortfield { flex: 1 1 100%; justify-content: space-between; gap: 10px; }
+  .sortfield select { flex: 1 1 auto; padding: 10px 14px; }
+
+  .activefilters { gap: 6px; margin-top: 14px; }
+  .chipfilter { padding: 8px 12px; }
+
+  /* --- cards --- */
+  /* Exactly two columns, not auto-fill. auto-fill with a 154px floor silently
+     collapses to ONE column at 320px, because two of them plus the gap need
+     322px and an iPhone SE only has 288px of content width. Two columns of
+     whatever fits is right at every phone size. */
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+  .card { border-radius: var(--radius-sm); }
+  .card__body { padding: 11px 12px 13px; gap: 5px; }
+  .card__title { font-size: 13.5px; }
+    .card__facts { font-size: 10.5px; gap: 5px; }
+  .card__overview { font-size: 11.5px; -webkit-line-clamp: 2; }
+  .card__genre { font-size: 10px; padding: 2px 7px; }
+  .card__meta { padding-top: 9px; }
+  .card__badge { top: 9px; left: 9px; padding: 4px 9px 4px 7px; font-size: 9.5px; }
+  .card__soon { top: 8px; right: 8px; font-size: 9px; padding: 4px 7px; }
+
+  /* No hover on a touch screen, so the (i) is the only way in and has to be
+     big enough to hit. */
+  .card__note { width: 32px; height: 32px; }
+
+  .sections { gap: 30px; }
+  .sec__head { flex-wrap: wrap; gap: 4px 10px; padding-bottom: 9px; margin-bottom: 14px; }
+  .sec__title { font-size: 17px; }
+
+  .state { padding: 52px 12px; }
+  .state__icon { width: 48px; height: 48px; margin-bottom: 18px; }
+  .state__title { font-size: 18px; }
+  .state__text { font-size: 13.5px; }
+  .loadmore { margin-top: 26px; }
+
+  /* --- browse drawer --- */
+  /* Nearly full width, and clear of the home indicator at the bottom - the
+     Apply button sat under it on an iPhone. */
+  .panel { width: min(400px, 92vw); }
+  .panel__body { gap: 14px; padding: 16px; }
+  .panelfield select { padding: 13px; }
+  .panel__foot { padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); }
+  .panel__clear, .panel__apply { padding: 13px 16px; }
+
+  /* --- detail modal --- */
+  .detail { border-radius: var(--radius); }
+  .detail__hero { height: clamp(150px, 34vw, 200px); }
+  .detail__head { flex-direction: column; align-items: flex-start; gap: 14px; padding: 0 18px; }
+  .detail__poster { width: 112px; margin-top: -58px; }
+  .detail__title { font-size: 24px; }
+  .detail__main { padding: 22px 18px 28px; }
+  .detail__section { margin-top: 24px; }
+  .detail__overview { font-size: 14.5px; line-height: 1.65; }
+  .detail__close { top: 12px; right: 12px; width: 36px; height: 36px; }
+  /* Two buttons, each the full width of the sheet - the same shape the
+     library's own popup uses. The official site is the one that goes: it is a
+     marketing page, while the trailer and the TMDB record are the two things
+     anyone actually opens this modal to reach. */
+  .detail__action--site { display: none; }
+  .detail__actions { flex-direction: column; align-items: stretch; gap: 9px; }
+  .btn-primary-solid,
+  .btn-outline {
+    width: 100%;
+    justify-content: center;
+    padding: 13px 20px;
+  }
+  .factgrid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .castrow { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 12px; }
+  .similar-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .season-row { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+
+  /* The library page's own phone rules are NOT here - see the block at the
+     bottom of this file. Its base styles are declared after this media query,
+     and at equal specificity the later rule wins at every width, so overrides
+     written up here were being silently undone. */
+
+  .footer { padding: 24px 0 32px; }
+  .footer__inner { flex-direction: column; text-align: center; gap: 12px; }
+}
+
+/* --- small phones ------------------------------------------------------- */
+@media (max-width: 480px) {
+  .hero { padding-top: 16px; }
+  .hero__title { font-size: 23px; letter-spacing: -0.03em; margin-bottom: 14px; }
+  .hero__eyebrow { margin-bottom: 8px; }
+  .modeswitch { margin-bottom: 12px; }
+
+  .grid { gap: 11px; }
+  .card__body { padding: 10px 11px 12px; }
+  /* At this width the overview is two lines of about four words each, which
+     is noise rather than a summary. The title, year and rating still say
+     everything a card is for, and the modal has the full text. */
+  .card__overview { display: none; }
+  .card__genres { gap: 4px; }
+
+  .toolbar__title { font-size: 19px; }
+  .segmented__btn { padding: 9px 4px; font-size: 12px; }
+
+  .similar-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .castrow { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
+  .detail__title { font-size: 21px; }
+  .detail__head { padding: 0 15px; }
+  .detail__main { padding: 20px 15px 24px; }
+}
+
+/* --- motion --- */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes shimmer {
+  from { background-position: 130% 0; }
+  to   { background-position: -30% 0; }
+}
+@keyframes beat {
+  0%, 72%, 100% { transform: scale(1); }
+  78% { transform: scale(1.22); }
+  84% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .card:hover { transform: none; }
+  .card:hover .card__poster img { transform: none; }
+}
+
+/* --- wordmark gloss --- */
+/* "Decouverte de films" is French for "Movie Discovery". The translation is
+   one hover away rather than printed permanently, so it explains without
+   cluttering. */
+.wordmark { position: relative; }
+
+.wordmark__gloss {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  white-space: nowrap;
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+  z-index: 5;
+}
+.wordmark:hover .wordmark__gloss,
+.wordmark:focus-visible .wordmark__gloss {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* The name is long, so it steps down before it can collide with the tools,
+   and below that it drops to the short form entirely. The arithmetic: at
+   360px the row has 328px to spend, of which the hamburger and the three
+   tool buttons already claim ~156px. "Decouverte de films." does not fit in
+   what is left at any readable size; "Decouverte." does. */
+@media (max-width: 560px) {
+  .wordmark__text { font-size: 15px; }
+  .wordmark__gloss { display: none; }
+}
+
+@media (max-width: 480px) {
+  .wordmark__long  { display: none; }
+  .wordmark__brief { display: inline; }
+}
+
+/* =========================================================================
+   THE WATCHED LIBRARY PAGE
+   Search asks "have I seen this". This page asks "what have I seen", and the
+   shape of the collection is the headline answer - which is why the numbers
+   come before the grid rather than sitting in a tooltip.
+   ========================================================================= */
+
+.libhero {
+  /* The .wash gradient is fixed with z-index 0, so it paints over any static
+     content beneath it. .hero and .results both opt out the same way. Without
+     this the whole stats bar renders and is then covered by the background. */
+  position: relative;
+  z-index: 1;
+  padding: 46px 0 26px;
+  text-align: center;
+}
+
+.stat { display: flex; flex-direction: column; gap: 5px; }/* A bar rather than a percentage label: the relative sizes are the point,
+   and four numbers competing with four other numbers reads as noise. *//* --- controls and facets --- */.facets {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.facets__label {
+  flex: none;
+  width: 74px;
+  padding-top: 7px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.facet.is-active {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--accent-deep);
+}/* The phone twin of the chip row. Hidden on desktop, where fifty chips are a
+   good way to see the whole shape of a collection at a glance - and unusable
+   on a phone, where the same fifty bury the grid under several screens of
+   scrolling before a single poster appears. */
+/* The phone twin of the chip row: one bordered control that carries its own
+   caption, the value and the caret. The border lives here rather than on the
+   <select> so the caption sits inside it - a loose label floating above the
+   box reads as a leftover from the desktop layout, which is exactly what it
+   would have been. */
+.facets__picker {
+  position: relative;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--tint);
+  padding: 0 36px 0 14px;
+  transition: border-color 0.16s var(--ease);
+}
+
+.facets__select {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 1 1 auto;
+  min-width: 0;
+  /* Transparent and borderless: the picker around it is the visible control,
+     and a second border inside the first looked like a mistake. */
+  background: transparent;
+  border: 0;
+  outline: none;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 13px 0;
+  text-align: right;
+  text-align-last: right;
+  cursor: pointer;
+}
+.facets__select option {
+  background: var(--card);
+  color: var(--ink);
+  text-align: left;
+}
+
+.facets__caret {
+  position: absolute;
+  top: 50%;
+  right: 13px;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}/* --- the leaner library card ---
+   No rating, runtime or overview: the sheet does not hold them, and printing
+   "Not rated yet" a thousand times would be noise dressed as information. */
+
+.card--lib .card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 14px 15px 16px;
+}
+
+.card--lib .card__facts { margin: 0; }/* --- library page on phones ---
+   Deliberately down here, not up in the main phone block. Everything above
+   `.libcontrols` in this file is shared with the search page, but the library
+   page's own base styles are declared BELOW that media query - and two rules
+   of equal specificity are settled by which comes last in the file, not by
+   which is inside a media query. Overrides written in the earlier block were
+   being quietly reverted by the base rules further down, which is why the
+   chips and the loose Category/Genre labels kept surviving on a phone. */
+@media (max-width: 767px) {  /* The desktop copy of the group name, which sat in the gutter beside the
+     chips. Each picker now carries its own caption, and two of them is one
+     too many. */
+  .facets__label { display: none; }
+
+  /* The two pickers become one card with a divider between them, the way a
+     phone's own settings list looks. Grouping them is what guarantees they
+     are the same width: as separate boxes they were each sized by their own
+     contents, so "Category" and "Genre" - different words, different values -
+     came out visibly different widths and read as a mistake. */
+  .facets {
+    gap: 0;
+    margin-bottom: 18px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--card);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+
+  /* `display: block` on purpose. The base rule is a flex row with
+     align-items: flex-start, which is what shrank each picker to its content
+     in the first place. */
+  .facets__group { display: block; }  /* The whole row lights up when its filter is doing something, so it is
+     obvious at a glance which of the two is narrowing the grid. */
+  .facets__picker.is-on { background: var(--accent-tint); }  .facets__picker.is-on .facets__pickerlabel { color: var(--accent-deep); }
+
+  /* 16px, not 15. iOS zooms the page whenever a focused control is under
+     16px and never zooms back out, and a <select> counts. */
+  .facets__select {
+    font-size: 16px;
+    font-weight: 600;
+    padding: 15px 0;
+  }
+  .facets__picker.is-on .facets__select { color: var(--accent-deep); }
+  .facets__picker.is-on .facets__caret { stroke: var(--accent); }
+
+  /* Focus is drawn as an inset ring rather than a border, which the card's
+     own rounded edge would otherwise clip in half. */
+  .facets__picker:focus-within { background: var(--accent-tint); }
+}
+
+@media (max-width: 860px) {
+  .statbar__lead {
+    width: 100%;
+    padding: 0 0 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    align-items: center;
+    text-align: center;
+  }
+  .statbar__tiles { width: 100%; }
+}
+
+
+/* =========================================================================
+   WRITING BACK - card buttons, the identity gate, and toasts
+   ========================================================================= */
+
+/* --- the buttons on a card ---
+   Bottom of the poster, over a gradient so they stay legible against a bright
+   still. Always rendered, whether or not anyone is signed in: clicking one as
+   a visitor opens the explanation of whose list this is, which is a better
+   answer than a control that was never there. */
+.cardacts {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+  padding: 22px 8px 8px;
+  background: linear-gradient(to top,
+              rgba(var(--shade-rgb), 0.72), rgba(var(--shade-rgb), 0));
+  /* Off until the card is hovered or focused on a pointer device, so a wall
+     of posters is not also a wall of buttons. Overridden to always-on for
+     touch, further down. */
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.18s var(--ease), transform 0.18s var(--ease);
+}
+
+.card:hover .cardacts,
+.card:focus-within .cardacts,
+.cardacts:focus-within { opacity: 1; transform: translateY(0); }
+
+.cardact {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 9px;
+  background: rgba(20, 20, 24, 0.62);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease),
+              transform 0.12s var(--ease);
+}
+.cardact svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.cardact:hover { background: rgba(20, 20, 24, 0.86); border-color: rgba(255,255,255,0.44); }
+.cardact:active { transform: scale(0.94); }
+.cardact:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+
+/* An engaged flag fills its icon as well as colouring it - colour alone is
+   the one signal some people cannot read. */
+.cardact.is-on svg { fill: currentColor; }
+.cardact--watched.is-on   { background: var(--seen); border-color: var(--seen); }
+.cardact--watchlist.is-on { background: var(--accent); border-color: var(--accent); }
+.cardact--favorite.is-on  { background: #e0245e; border-color: #e0245e; }
+.cardact--must.is-on      { background: #f0a500; border-color: #f0a500; color: #1a1a1a; }
+
+/* The watched tick is not a fill, so it needs its own rule. */
+.cardact--watched.is-on svg { fill: none; }
+
+/* In flight. The whole card dims rather than one button, because a write can
+   change several flags at once. */
+/* A save in flight must not look like a broken card. The old rule faded this
+   to 62% and switched off pointer events, which is the visual language of
+   broken - so a working 1-2s write read as a hang. The card now stays fully
+   legible; only the pressed button spins. */
+/* Only the button being pressed goes inert. Blocking the whole card meant you
+   could not queue a second change while the first was in flight, and blocking
+   the grid made the page feel frozen for the second the bridge takes. */
+.card.is-saving { pointer-events: auto; }
+.card.is-saving .card__poster::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--shade-rgb), 0.14);
+  animation: sc-breathe 1.1s var(--ease) infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+.card.is-saving .cardacts { opacity: 1; transform: none; }
+
+/* No hover on a touch screen, so the buttons are simply always there. */
+@media (hover: none) {
+  .cardacts { opacity: 1; transform: none; }
+  .cardact { height: 34px; }
+}
+
+/* --- the identity gate --- */
+.gate {
+  position: fixed;
+  inset: 0;
+  /* Above Bootstrap's modal (1055) and its backdrop (1050), so a dialog is
+     never buried mid-fade by a modal on its way out. */
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.gate__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--shade-rgb), 0.55);
+  backdrop-filter: blur(4px);
+  animation: gatefade 0.2s var(--ease) both;
+}
+body.gate-open { overflow: hidden; }
+
+.gate__panel {
+  position: relative;
+  width: min(440px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 30px 28px 26px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--card);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  animation: gaterise 0.24s var(--ease) both;
+}
+.gate__panel--wide { width: min(500px, 100%); text-align: left; }
+
+@keyframes gatefade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gaterise {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+.gate__title {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.gate__text {
+  margin: 0 0 22px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.gate__text b { color: var(--ink); font-weight: 700; }
+
+.gate__label {
+  display: block;
+  margin-bottom: 7px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+}
+
+.gate__input,
+.gate__select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--tint);
+  font-family: var(--font-body);
+  /* 16px so iOS does not zoom the page on focus and leave it zoomed. */
+  font-size: 16px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.16s var(--ease);
+}
+.gate__input:focus,
+.gate__select:focus { border-color: var(--accent); }
+.gate__select { appearance: none; -webkit-appearance: none; cursor: pointer; font-weight: 600; }
+
+.gate__error {
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(224, 36, 94, 0.1);
+  color: #c2185b;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.gate__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+.gate__btn {
+  flex: 1;
+  padding: 12px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+.gate__btn--ghost { background: transparent; color: var(--ink-soft); }
+.gate__btn--ghost:hover { background: var(--tint); color: var(--ink); }
+.gate__btn--solid {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.gate__btn--solid:hover { background: var(--accent-deep); border-color: var(--accent-deep); }
+.gate__btn:disabled { opacity: 0.6; cursor: default; }
+
+/* --- the "which shelf?" dialog --- */
+.askfield { margin-bottom: 16px; }
+.askfield__new { margin-top: 8px; }
+
+.askflags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding-top: 4px;
+}
+.askflag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.askflag input { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; }
+
+/* --- toasts ---
+   Bottom centre, above everything, and out of the way of a thumb reaching the
+   buttons that produce them. */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(26px + env(safe-area-inset-bottom));
+  z-index: 1400;
+  max-width: min(440px, calc(100vw - 32px));
+  padding: 13px 20px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  box-shadow: var(--shadow-lg);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, 14px);
+  pointer-events: none;
+  transition: opacity 0.22s var(--ease), transform 0.22s var(--ease);
+}
+.toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+.toast--error {
+  border-color: rgba(224, 36, 94, 0.4);
+  background: #fff1f5;
+  color: #a01243;
+}
+[data-theme="dark"] .toast--error { background: #3a1020; color: #ffa8c4; }
+
+@media (max-width: 767px) {
+  .gate { padding: 14px; }
+  .gate__panel { padding: 24px 20px 20px; }
+  .gate__title { font-size: 19px; }
+  .gate__text { font-size: 14px; margin-bottom: 18px; }
+  /* Stacked and reversed, so the affirmative sits under the thumb rather
+     than the one that backs out. */
+  .gate__actions { flex-direction: column-reverse; }
+  .cardact { height: 33px; }
+  .cardact svg { width: 14px; height: 14px; }
+}
+
+/* --- collection views: All / Favourites / Must watch --- */
+
+
+@media (max-width: 767px) {
+    /* Three even columns, so the row reads as one control rather than three
+     pills of whatever width their labels happened to need. */
+    }
+
+
+/* --- saving and toasts ------------------------------------------------------
+   Appended at the end of the file on purpose. At equal specificity the later
+   rule wins at every width, so anything added above the library phone block
+   would be silently reverted by it. Keep new rules down here. */
+
+@keyframes sc-breathe {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.85; }
+}
+
+/* The pressed button, mid-write. The icon is replaced by a ring so the control
+   reports its own state rather than relying on a strip elsewhere on screen. */
+.cardact.is-working { position: relative; pointer-events: none; }
+.cardact.is-working svg { opacity: 0; }
+.cardact.is-working::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.62s linear infinite;
+}
+
+.toasts {
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 1090;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+  width: max-content;
+  max-width: min(92vw, 460px);
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+}
+.toast.is-on { opacity: 1; transform: translateY(0); }
+
+.toast__text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.toast__icon { width: 16px; height: 16px; flex: 0 0 auto; }
+.toast__icon path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Pending is the state that matters. It has to move, or the toast is just a
+   label on a frozen screen. */
+.toast__spin {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.66s linear infinite;
+}
+
+.toast--pending { color: var(--ink-soft); }
+.toast--done { border-color: var(--seen); color: var(--seen-deep); background: var(--seen-wash); }
+.toast--error { border-color: var(--danger); color: var(--danger); background: var(--accent-tint); }
+
+[data-theme="dark"] .toast--done { background: #10241c; color: #6fd8ac; }
+[data-theme="dark"] .toast--error { background: #3a1020; color: #ffa8c4; }
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { transition: none; }
+  .toast__spin,
+  .cardact.is-working::after,
+  .card.is-saving .card__poster::after { animation: none; }
+  .toast__spin { border-top-color: var(--accent); }
+}
+
+/* --- library card: sheet rows have no overview, rating or runtime --- */
+.card--sheet .card__body { padding-bottom: 14px; }
+
+
+/* --- collection page shell --- */
+/* Positioned and ranked, or .wash paints over it. .wash is fixed, 760px tall
+   and OPAQUE, and a positioned element at z-index 0 paints above non-positioned
+   content - so the title, the counts and the view pills were veiled and the top
+   of the page read as a blank band. Every top-level region needs a rank:
+   .topbar 60, .hero 20, .results 1, .coll 1, .footer 1. */
+.coll {
+  position: relative;
+  z-index: 1;
+  padding-top: 26px;
+  padding-bottom: 60px;
+}
+
+.coll__head { margin-bottom: 20px; }
+
+.coll__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+.coll__title {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 5vw, 42px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0;
+}
+.collbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding-bottom: 20px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.collbar__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 240px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+}
+.collbar__search svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.collbar__search svg circle,
+.collbar__search svg path { fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; }
+
+.collbar__search input {
+  flex: 1 1 auto;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  /* 16px, not 15px. iOS zooms on any focused control under 16px and never zooms
+     back out. Easy to reintroduce by tidying this down. */
+  font-size: 16px;
+  font-family: var(--font-body);
+  padding: 11px 0;
+  min-width: 0;
+}
+.collbar__search input:focus { outline: none; }
+.collbar__search input::-webkit-search-cancel-button { display: none; }
+
+.collbar__search button {
+  border: 0;
+  background: none;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+}
+.collbar__search button svg path { stroke: var(--muted); }
+
+.facets--inline { flex: 0 1 auto; min-width: 140px; }
+
+.collbar__count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 11px auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .coll { padding-top: 18px; }
+  .collbar { gap: 10px; }
+  .facets--inline { flex: 1 1 45%; min-width: 0; }
+  .collbar__count { margin-left: 0; width: 100%; }
+  /* Both must stay at 16px on a phone for the same iOS reason as above. */
+  .collbar__search input,
+  .facets--inline .facets__select { font-size: 16px; }
+  .toasts { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .toast { font-size: 13px; padding: 10px 15px; }
+}
+
+
+/* ============================================================================
+   The pieces the JS renders. Everything below is appended on purpose: the
+   library phone block sits ~270 lines above, and at equal specificity the later
+   rule wins at every width, so anything added higher up gets silently reverted.
+   New rules go here.
+   ============================================================================ */
+
+/* --- result sections --- */
+.sect { margin-bottom: 40px; }
+
+.sect__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.sect__icon { font-size: 16px; line-height: 1; }
+
+.sect__n {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--tint);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+/* --- active browse filters: each chip removes its own filter --- */
+.chipx {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--tint);
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+.chipx:hover { background: var(--card); border-color: var(--accent); color: var(--ink); }
+.chipx:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chipx svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+/* --- a card whose title is on the watchlist --- */
+.card.is-listed .card__poster { box-shadow: inset 0 0 0 2px var(--gold-line); }
+
+/* --- solid button, the twin of .btn-outline --- */
+.btn-solid {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.18s var(--ease);
+}
+.btn-solid:hover { background: var(--accent-deep); color: var(--on-accent); transform: translateY(-1px); }
+.btn-solid svg { width: 15px; height: 15px; }
+
+/* --- autocomplete: the role beside a name --- */
+.acbox__role {
+  margin-left: auto;
+  padding-left: 12px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* --- browse panel and collection facets --- */
+.facets {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.facets__wrap { position: relative; display: block; }
+
+.facets__wrap .facets__select { width: 100%; padding-right: 34px; }
+
+.facets__wrap .facets__caret {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+/* --- the detail modal ---------------------------------------------------- */
+
+.detail__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.detail__chip {
+  padding: 6px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--tint);
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+
+.detail__people {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 14px;
+}
+
+.detail__person { display: flex; flex-direction: column; gap: 5px; text-align: center; }
+
+.detail__person-name { font-size: 12.5px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.detail__person-role { font-size: 11.5px; color: var(--muted); line-height: 1.3; }
+
+.detail__similars {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 14px;
+}
+
+.detail__similar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink);
+}
+.detail__similar-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--tint);
+  transition: transform 0.2s var(--ease);
+}
+.detail__similar:hover .detail__similar-art { transform: translateY(-3px); }
+
+.detail__similar-art img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.detail__similar > span { font-size: 12.5px; font-weight: 600; line-height: 1.3; }
+.detail__similar:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--radius-sm); }
+
+/* Green only ever means "already watched". */
+.detail__similar-seen {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--seen);
+}
+.detail__similar-seen svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: var(--on-seen);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.detail__video {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #000;
+}
+.detail__video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+/* --- the mark-watched dialog --- */
+.gate--form .gate__panel { max-height: calc(100vh - 48px); overflow-y: auto; }
+
+.askfield { margin-bottom: 15px; }
+.askfield__new { margin-top: 8px; }
+
+.askflags { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 16px; }
+
+.askflag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.askflag input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+/* Body scroll is locked while any dialog or the browse drawer is open, or the
+   page behind scrolls under the panel on a phone. */
+body.panel-open { overflow: hidden; }
+
+@media (max-width: 767px) {
+  .sect { margin-bottom: 30px; }
+  .sect__head { font-size: 17px; }
+  .detail__people { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
+  .detail__similars { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+    /* 16px, not 15px. iOS zooms on any focused control below it and never zooms
+     back out. */
+  .gate__input, .gate__select, .facets__select { font-size: 16px; }
+}
+
+.coll__lead {
+  font-size: 14.5px;
+  color: var(--ink-soft);
+  margin: 10px 0 0;
+  max-width: 56ch;
+}
+
+/* The browse control moved out of the leading slot and in with the tools, so it
+   needs the count badge the hamburger used to carry. */
+.icon-btn__count {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* --- the mark-watched dialog is a sequence, so the fields are numbered --- */
+.gate__label { display: flex; align-items: center; gap: 8px; }
+
+.askfield__step {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.askfield__hint {
+  margin: 7px 0 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+
+/* ============================================================================
+   Navbar state, the card menu, and the collection header.
+   Appended, for the cascade reason at the top of the previous block.
+   ============================================================================ */
+
+/* --- you are here --- */
+.icon-btn.is-current {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--accent-deep);
+  cursor: default;
+}
+.icon-btn.is-current svg { stroke: var(--accent-deep); }
+.icon-btn.is-current .icon-btn__text { color: var(--accent-deep); font-weight: 700; }
+.icon-btn.is-current:hover { transform: none; }
+
+[data-theme="dark"] .icon-btn.is-current {
+  background: rgba(var(--accent-rgb), 0.18);
+  color: #ff9dc0;
+}
+[data-theme="dark"] .icon-btn.is-current svg,
+[data-theme="dark"] .icon-btn.is-current .icon-btn__text { color: #ff9dc0; stroke: #ff9dc0; }
+
+/* --- the collection header ------------------------------------------------- */
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.stat {
+  flex: 1 1 auto;
+  min-width: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 13px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+}
+
+.stat__n {
+  font-family: var(--font-display);
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+.stat__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.stat--fav .stat__n { color: var(--accent-deep); }
+.stat--must .stat__n { color: var(--gold-ink); }
+[data-theme="dark"] .stat--fav .stat__n { color: #ff9dc0; }
+[data-theme="dark"] .stat--must .stat__n { color: #e8bd6a; }
+
+/* The split by industry as proportions. "450 Hollywood, 300 Bollywood" makes
+   the reader do that arithmetic; a bar does it for them. */
+.split { margin-top: 16px; }
+
+.split__track {
+  display: flex;
+  height: 9px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--tint);
+}
+
+.split__seg { display: block; height: 100%; }
+.split__seg--0 { background: var(--accent); }
+.split__seg--1 { background: var(--seen); }
+.split__seg--2 { background: var(--gold); }
+.split__seg--3 { background: #6b7fd7; }
+.split__seg--4 { background: #9b6bd7; }
+.split__seg--5 { background: var(--muted); }
+
+.split__keys { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 11px; }
+
+.split__key {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.split__key b { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--ink); }
+
+.split__dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+
+/* --- the collection controls were invisible against the page --------------- */
+
+.collbar {
+  padding: 16px;
+  margin-top: 26px;
+  margin-bottom: 26px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+}
+
+.collbar__search { background: var(--tint); border-color: var(--line); }
+.collbar__search:focus-within { border-color: var(--accent); background: var(--card); }
+
+/* The picker, not the select, is the visible control - but it needs to look
+   like one. It read as plain text against the page before this. */
+.facets--inline .facets__wrap {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--tint);
+  padding: 0 34px 0 12px;
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+.facets--inline .facets__wrap:hover { border-color: var(--muted); }
+.facets--inline .facets__wrap:focus-within { border-color: var(--accent); background: var(--card); }
+.facets--inline .facets__select { text-align: left; text-align-last: left; width: 100%; }
+
+.facets--inline .facets__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.collbar__count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.collbar__count span { font-weight: 700; color: var(--ink); }
+
+@media (max-width: 767px) {
+  .stats { gap: 8px; }
+  .stat { min-width: 0; flex: 1 1 30%; padding: 11px 13px; }
+  .stat__n { font-size: 21px; }
+  .collbar { padding: 13px; }
+}
+
+
+/* ============================================================================
+   Stacking, the floating card menu, and the mobile pass.
+   ============================================================================ */
+
+.cardmenu { position: absolute; right: 8px; bottom: 8px; z-index: 4; }
+
+
+.card:hover .cardmenu__btn,
+.card:focus-within .cardmenu__btn,
+.cardmenu.is-open .cardmenu__btn { opacity: 1; transform: none; }
+
+/* No hover on a touch screen, so the button has to be there already. */
+@media (hover: none) {
+  .cardmenu__btn { opacity: 1; transform: none; }
+}
+
+
+.cardmenu__item.is-on { color: var(--ink); }
+.cardmenu__item.cardact--favorite.is-on svg { fill: var(--accent); stroke: var(--accent); }
+.cardmenu__item.cardact--must.is-on svg { fill: var(--gold); stroke: var(--gold); }
+.cardmenu__item.cardact--watched.is-on svg { stroke: var(--seen); }
+.cardmenu__item.cardact--watchlist.is-on svg { fill: var(--gold); stroke: var(--gold); }
+
+/* --- one row, one height ---------------------------------------------------
+   The search field and the three pickers are a single control strip, and they
+   read as one only if they line up. 46px, set on both, rather than left to
+   whatever padding each happened to have. */
+.collbar { align-items: flex-end; }
+.collbar__search { height: 46px; padding: 0 14px; }
+.collbar__search input { padding: 0; height: 100%; }
+.facets--inline { gap: 6px; margin-bottom: 0; }
+.facets--inline .facets__wrap { height: 46px; display: flex; align-items: center; }
+.facets--inline .facets__select { padding: 0; height: 100%; }
+.collbar__count { margin-bottom: 14px; }
+
+/* --- the browse drawer's pickers ------------------------------------------
+   These were transparent on a transparent panel and read as plain text. The
+   wrapper is the control now, and it looks like one. */
+.panel__body .facets { gap: 7px; margin-bottom: 15px; }
+
+.panel__body .facets__label {
+  width: auto;
+  padding-top: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.panel__body .facets__wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 46px;
+  padding: 0 34px 0 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--tint);
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+.panel__body .facets__wrap:hover { border-color: var(--muted); }
+.panel__body .facets__wrap:focus-within { border-color: var(--accent); background: var(--card); }
+.panel__body .facets__select {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  text-align: left;
+  text-align-last: left;
+  /* 16px, never lower. iOS zooms on any focused control under it and never
+     zooms back out; a select counts. */
+  font-size: 16px;
+}
+
+/* --- the trailer / IMDb / TMDB row ----------------------------------------
+   These are the only actions in the modal, so they should look like actions.
+   They had been reduced to plain bordered text. */
+.detail__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+
+.btn-solid,
+.detail__actions .btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.18s var(--ease);
+}
+
+.btn-solid {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 6px 18px -8px rgba(var(--accent-rgb), 0.7);
+}
+.btn-solid:hover { background: var(--accent-deep); border-color: var(--accent-deep); color: var(--on-accent); transform: translateY(-1px); }
+.btn-solid:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.detail__actions .btn-outline {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+}
+.detail__actions .btn-outline:hover { border-color: var(--accent); color: var(--accent-deep); transform: translateY(-1px); }
+
+.btn-solid svg, .detail__actions .btn-outline svg { width: 16px; height: 16px; }
+
+/* --- the modal close button ------------------------------------------------
+   It sat on the backdrop image at z-index 5 and vanished against a light
+   poster, worst of all on a phone where the hero fills the top of the screen.
+   It gets its own surface and outranks the hero. */
+.detail__close {
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.detail__close svg { stroke: currentColor; }
+.detail__close:hover { background: rgba(0, 0, 0, 0.78); }
+
+/* ============================================================================
+   Phones. Everything above is sized for a pointer; this is the pass that makes
+   it fit a 360px screen.
+   ============================================================================ */
+@media (max-width: 767px) {
+  .coll { padding-top: 14px; }
+  .coll__title { font-size: clamp(22px, 6.4vw, 28px); }
+  .coll__lead { font-size: 13.5px; }
+
+  .stats { gap: 7px; margin-top: 15px; }
+  .stat { flex: 1 1 28%; min-width: 0; padding: 9px 11px; }
+  .stat__n { font-size: 19px; }
+  .stat__label { font-size: 9px; letter-spacing: 0.07em; }
+
+  .split { margin-top: 13px; }
+  .split__keys { gap: 6px 12px; margin-top: 9px; }
+  .split__key { font-size: 11.5px; }
+
+  .collbar { padding: 12px; margin-top: 18px; margin-bottom: 18px; gap: 9px; }
+  .collbar__search, .facets--inline .facets__wrap { height: 42px; }
+  .collbar__count { margin-bottom: 0; }
+
+  
+  /* The trigger was a 34px circle on a 150px-wide poster. */
+  .cardmenu { right: 6px; bottom: 6px; }
+  .cardmenu__btn { width: 30px; height: 30px; }
+  .cardmenu__btn svg { width: 15px; height: 15px; }
+
+  .cardmenu__layer { min-width: 0; width: min(240px, calc(100vw - 20px)); padding: 5px; }
+  .cardmenu__item { padding: 9px 10px; font-size: 12.5px; gap: 8px; }
+
+  /* "Remove from watchlist" is the longest label and was pushing the icon out
+     of the row entirely. It wraps now, and the icon holds its width. */
+  .cardmenu__item span { white-space: normal; }
+
+  .detail__close { top: 10px; right: 10px; width: 34px; height: 34px; }
+  .detail__close svg { width: 16px; height: 16px; }
+
+  .detail__actions { gap: 8px; }
+  .btn-solid, .detail__actions .btn-outline { height: 38px; padding: 0 14px; font-size: 12.5px; }
+
+  /* The mark-watched dialog has to fit the screen, not hang off it. */
+  .gate { padding: 10px; }
+  .gate__panel, .gate__panel--wide {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 20px);
+    padding: 20px 17px 18px;
+  }
+  .gate__title { font-size: 19px; }
+  .gate__text { font-size: 13.5px; }
+  .askfield { margin-bottom: 12px; }
+  .askflags { gap: 10px; margin: 2px 0 13px; }
+  .askflag { font-size: 13px; }
+  .gate__actions { gap: 8px; }
+  .gate__btn { flex: 1 1 auto; justify-content: center; }
+}
+
+
+/* ============================================================================
+   Flag marks, the collection header, and the modal action row.
+   ============================================================================ */
+
+/* --- the collection header, centred ---------------------------------------
+   The heading, the lead and the numbers are the page introducing itself, and a
+   centred column reads as an introduction where a left rail reads as the start
+   of a form. Bounded, because a lead line running the full width of a desktop
+   monitor is not a line anyone finishes. */
+.coll__head {
+  max-width: 720px;
+  margin: 0 auto 22px;
+  text-align: center;
+}
+
+.coll__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.coll__title {
+  font-family: var(--font-display);
+  font-size: clamp(30px, 4.6vw, 46px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--ink);
+  margin: 0;
+}
+
+.coll__lead {
+  max-width: 46ch;
+  margin: 12px auto 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+/* Bounded and centred, so five tiles do not stretch to 1800px and turn into a
+   row of mostly whitespace. */
+.stats {
+  max-width: 660px;
+  margin: 22px auto 0;
+  justify-content: center;
+}
+
+.stat {
+  flex: 0 1 118px;
+  align-items: center;
+  text-align: center;
+  padding: 14px 12px;
+  border-radius: var(--radius);
+}
+.stat__n { font-size: 27px; }
+.stat__label { text-align: center; }
+
+.split { max-width: 660px; margin-left: auto; margin-right: auto; }
+.split__keys { justify-content: center; }
+
+
+@media (max-width: 767px) {
+  .coll__head { margin-bottom: 16px; }
+  .coll__title { font-size: clamp(24px, 7.2vw, 32px); }
+  .coll__lead { font-size: 13.5px; margin-top: 9px; }
+  .stats { margin-top: 15px; }
+  .stat { flex: 1 1 88px; padding: 10px 8px; border-radius: var(--radius-sm); }
+  .stat__n { font-size: 20px; }
+}
+
+/* --- the modal action row --------------------------------------------------
+   Four pills wrapped one-per-line on a phone and read as a stack of unrelated
+   links. Two columns keeps it a row of actions. */
+@media (max-width: 599px) {
+  .detail__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .detail__actions > * {
+    width: 100%;
+    justify-content: center;
+    padding: 0 10px;
+    /* The labels are short but "Official site" is not, and a pill that clips its
+       own label is worse than one that shrinks its text. */
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  /* An odd count leaves a gap; the trailer is the primary action, so it takes
+     the full width rather than sitting beside a hole. */
+  .detail__actions > .btn-solid:first-child:nth-last-child(odd) { grid-column: 1 / -1; }
+}
+
+
+/* ============================================================================
+   The card action bar, and the browse drawer moved to the right.
+   ============================================================================ */
+
+/* The bottom row of a card, in the space the TMDB rating used to occupy.
+   Favourite and Must watch on the left for a watched title; Watchlist on the
+   right for one that is not. Filled means on, so the state is the icon rather
+   than something you have to open a menu to read. */
+.cardbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid var(--line-soft);
+  min-height: 34px;
+}
+
+.cardbar__side { display: flex; align-items: center; gap: 7px; }
+.cardbar__side--end { margin-left: auto; }
+
+.cardbar__btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--tint);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease),
+              color 0.15s var(--ease), transform 0.15s var(--ease);
+}
+.cardbar__btn svg {
+  width: 16px;
+  height: 16px;
+  /* Outline when off, solid when on - so the fill IS the state. */
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.cardbar__btn:hover { border-color: var(--muted); color: var(--ink); transform: translateY(-1px); }
+.cardbar__btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.cardbar__btn.is-on svg { fill: currentColor; stroke: currentColor; }
+
+.cardbar__btn--favorite.is-on {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+.cardbar__btn--must.is-on {
+  border-color: var(--gold-line);
+  background: var(--gold-tint);
+  color: var(--gold);
+}
+.cardbar__btn--watchlist.is-on {
+  border-color: var(--gold-line);
+  background: var(--gold-tint);
+  color: var(--gold);
+}
+
+[data-theme="dark"] .cardbar__btn--favorite.is-on { color: #ff8fb2; }
+[data-theme="dark"] .cardbar__btn--must.is-on,
+[data-theme="dark"] .cardbar__btn--watchlist.is-on { color: #edc477; }
+
+/* Mid-write. The button keeps its shape so the row does not reflow. */
+.cardbar__btn.is-working { pointer-events: none; opacity: 0.55; }
+
+/* --- the browse drawer, now on the right ----------------------------------
+   It opens from the same side as the button that summons it. Reaching across
+   the whole width to a panel that arrives from the far edge is a small thing
+   that reads as wrong every time. */
+.panel {
+  right: 0;
+  left: auto;
+  transform: translateX(100%);
+  border-right: 0;
+  border-left: 1px solid var(--line);
+}
+.panel.is-open { transform: translateX(0); }
+
+@media (max-width: 767px) {
+  .cardbar { margin-top: 10px; padding-top: 9px; min-height: 30px; }
+  .cardbar__btn { width: 29px; height: 29px; }
+  .cardbar__btn svg { width: 15px; height: 15px; }
+}
+
+/* --- the modal action row --------------------------------------------------
+   The trailer is the one thing anyone came for, so it takes the whole first
+   row; the three reference links share the second. */
+@media (max-width: 599px) {
+  .detail__actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .detail__actions > .btn-solid { grid-column: 1 / -1; }
+  .detail__actions > * {
+    width: 100%;
+    justify-content: center;
+    padding: 0 8px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+}
+
+/* Last in the row, and set apart: it opens a drawer rather than navigating, so
+   it should not read as another destination. */
+.icon-btn--browse { position: relative; margin-left: 4px; }
+.icon-btn--browse::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 20px;
+  background: var(--line);
+}
+
+
+/* ============================================================================
+   One card height for every card.
+   ============================================================================
+   A grid where every card is a different height reads as broken even when each
+   one is individually fine, and the eye cannot scan a row whose baselines move.
+   Every text block below is therefore bounded to a known number of lines, and
+   grid-auto-rows: 1fr makes every row of the grid match the tallest card in it.
+   The action bar is pushed to the bottom with margin-top:auto, so a card with a
+   short title has more whitespace above the bar rather than a shorter body. */
+
+.grid { grid-auto-rows: 1fr; }
+
+.card { height: 100%; }
+
+.card__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Scrolled sideways rather than wrapped or truncated: a long title is still
+   readable, and the row keeps its height. No visible scrollbar - the overflow is
+   a fallback, not a control, and a 4px bar under every second title would be
+   more noise than the titles it serves. */
+.card__scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* A hint that there is more, without a scrollbar saying so. */
+  mask-image: linear-gradient(90deg, #000 calc(100% - 20px), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 20px), transparent 100%);
+}
+.card__scroll::-webkit-scrollbar { display: none; }
+
+.card__title {
+  flex: 0 0 auto;
+  line-height: 1.28;
+  height: 1.28em;
+}
+
+.card__release {
+  flex: 0 0 auto;
+  height: 1.35em;
+  line-height: 1.35;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Year / language / runtime. Always one line, always the same line. */
+.card__facts {
+  flex: 0 0 auto;
+  height: 1.4em;
+  line-height: 1.4;
+  align-items: center;
+}
+
+.card__genres {
+  flex: 0 0 auto;
+  height: 26px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+.card__genre { flex: 0 0 auto; }
+
+/* Three lines, then an ellipsis. The whole thing is in the modal, which is where
+   anyone reading past three lines is heading anyway. */
+.card__overview {
+  flex: 0 0 auto;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.5;
+  height: 4.5em;
+  margin-bottom: 0;
+}
+
+.cardbar { margin-top: auto; }
+
+@media (max-width: 767px) {
+  .card__genres { height: 24px; }
+  /* Two lines on a phone: the card is narrower, so three lines of a 13px face
+     eats more of it than it earns. */
+  .card__overview { -webkit-line-clamp: 2; height: 3em; }
+}
+
+/* Green means watched, everywhere in this app - the card border, the badge, and
+   now the tick. Without its own rule the filled tick inherited the row's muted
+   grey, so the one state the whole app is built around was the only one that did
+   not announce itself. */
+.cardbar__btn--watched.is-on {
+  border-color: var(--seen);
+  background: var(--seen-tint);
+  color: var(--seen-deep);
+}
+.cardbar__btn--watched.is-on svg { fill: none; stroke: currentColor; stroke-width: 2.6; }
+
+[data-theme="dark"] .cardbar__btn--watched.is-on { color: var(--seen-bar); }
+
+/* ============================================================================
+   The detail modal: numbers grid, circular cast, trailer.
+   ============================================================================ */
+
+/* The TMDB score, in the facts line rather than a tile of its own - it is the
+   one number people read before deciding. */
+.detail__rate { color: var(--gold-ink); font-weight: 700; }
+
+/* Label above value, in a grid that keeps its shape between titles. A cell that
+   disappears when TMDB has no figure makes every title a different layout; an em
+   dash says the same thing and holds the row. */
+.detail__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.detail__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 14px 16px;
+  background: var(--card);
+}
+
+.detail__cell-key {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.detail__cell-val {
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+  /* Long director credits and "$115,000,000" both live here, so it wraps rather
+     than pushing the grid wider. */
+  overflow-wrap: anywhere;
+}
+
+.detail__people { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+
+
+@media (max-width: 599px) {
+  /* Two columns, so a six-cell grid is three tidy rows rather than six thin
+     ones or two cramped ones. */
+  .detail__grid { grid-template-columns: 1fr 1fr; }
+  .detail__cell { padding: 11px 13px; gap: 5px; }
+  .detail__cell-val { font-size: 13.5px; }
+
+  .detail__people { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .detail__person-name { font-size: 11.5px; }
+  .detail__person-role { font-size: 10.5px; }
+
+}
+
+/* --- cast faces ------------------------------------------------------------
+   A circle cut from a 2:3 headshot. object-position matters more than anything
+   else here: centring the crop puts the middle of the torso in the circle and
+   slices the top of every head off, because TMDB profile shots are framed
+   head-and-shoulders with the face high in the frame. 20% down is where faces
+   actually sit. */
+.detail__face {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 78px;
+  height: 78px;
+  margin: 0 auto;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--tint-2);
+  border: 1px solid var(--line);
+}
+
+.detail__face img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 20%;
+}
+
+/* Behind the photo, so a missing OR broken image reveals it with no scripting.
+   One neutral treatment rather than a colour per person: green and gold already
+   mean watched and must-watch everywhere else, and borrowing them for decoration
+   would spend meaning that is already committed. */
+.detail__face-ini {
+  font-family: var(--font-display);
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--muted);
+  user-select: none;
+}
+
+/* --- the trailer -----------------------------------------------------------
+   The close button lives on a bar ABOVE the frame. Inside it, it landed on
+   YouTube's own settings and fullscreen controls in the same corner, and either
+   could be hit by mistake. */
+.detail__trailer {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  overflow: hidden;
+}
+
+.detail__trailer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 8px 8px 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.detail__trailer-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.detail__trailer-close {
+  display: inline-grid;
+  grid-auto-flow: column;
+  align-items: center;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--tint);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+.detail__trailer-close svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.3;
+  stroke-linecap: round;
+}
+.detail__trailer-close:hover { background: var(--accent-tint); border-color: var(--accent); color: var(--accent-deep); }
+.detail__trailer-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.detail__trailer .detail__video { border-radius: 0; }
+
+@media (max-width: 767px) {
+  .detail__face { width: 100%; height: auto; aspect-ratio: 1; }
+  .detail__face-ini { font-size: 21px; }
+}
+
+@media (max-width: 599px) {
+  /* Trailer across the top, the reference links sharing the row beneath. Three
+     columns because IMDb, TMDB and Official site is the usual set; with only two
+     of them present they simply take two of the three tracks. */
+  .detail__actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .detail__actions > .btn-solid { grid-column: 1 / -1; }
+  .detail__actions > * {
+    width: 100%;
+    justify-content: center;
+    padding: 0 6px;
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+  /* The label is what matters at this size; the icon is the first thing to go. */
+  .detail__actions > .btn-outline svg { display: none; }
+
+  .detail__trailer-bar { padding: 7px 7px 7px 12px; }
+  /* Bigger, because on touch this is the ONLY way out of the video. */
+  .detail__trailer-close { width: 34px; height: 34px; }
+}
+
+/* --- no poster, no placeholder --------------------------------------------
+   The title stands in for missing artwork. A generic film-reel graphic says
+   nothing; the title says exactly which film TMDB has no image for. Rendered
+   behind the <img> in every case, so a dead URL reveals it too - an image with
+   an empty alt draws nothing when it fails. */
+.detail__poster-alt,
+.detail__similar-alt {
+  padding: 14px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--muted);
+  /* Long titles must not push the tile wider than its aspect ratio. */
+  overflow-wrap: anywhere;
+}
+
+.detail__poster-alt { font-size: 17px; }
+.detail__similar-alt { font-size: 12px; padding: 9px; }
+
+@media (max-width: 767px) {
+  .detail__poster-alt { font-size: 14px; padding: 10px; }
+}
+
+
+/* ============================================================================
+   Mobile: the navbar was wider than the phone.
+   ============================================================================
+   This is what the dark band down the right side was. Nothing was "extra space" -
+   the topbar simply did not fit, so the DOCUMENT became wider than the viewport
+   and every full-width section below it was laid out against the document, not
+   the screen.
+
+   The arithmetic on a 360px phone, before this block:
+     wrap padding      32
+     wordmark          25 + 9 gap + ~105 of text  = 139
+     seven buttons     7 x 36 = 252, plus 6 x 7 gaps = 42
+                                                   -----
+                                                     465   on a 360px screen
+
+   Three things fix it, in order of how much they buy:
+
+   1. The wordmark text goes. The mark stays as the way home, which is what a
+      logo is for, and that is ~114px recovered - more than the other two
+      together. It also keeps all four destinations visible, which matters more
+      on a phone than the brand does.
+   2. Smaller buttons and tighter gaps.
+   3. A last-resort scroll on the icon row itself. If some future button pushes
+      it over again, the row scrolls and the PAGE does not - a scrollable strip
+      is a small annoyance, a horizontally scrolling page is the band above. */
+
+/* overflow-x: clip, not hidden. `hidden` on body makes it a scroll container and
+   the sticky topbar stops sticking; `clip` just clips. */
+body { overflow-x: clip; }
+
+@media (max-width: 600px) {
+  .wordmark__text,
+  .wordmark__gloss { display: none; }
+
+  /* The only way back to search now, so it earns a real tap target. */
+  .wordmark__mark { width: 32px; height: 32px; }
+  .wordmark { gap: 0; }
+
+  .topbar__inner { gap: 8px; }
+
+  .topbar__tools {
+    min-width: 0;
+    gap: 5px;
+    /* The safety net described above. */
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .topbar__tools::-webkit-scrollbar { display: none; }
+
+  .icon-btn { width: 34px; height: 34px; flex: 0 0 34px; }
+  .icon-btn svg { width: 17px; height: 17px; }
+
+  /* The hairline before the browse button costs 8px of a budget that has none,
+     and with no text labels the row no longer reads as destinations-then-tools
+     anyway. */
+  .icon-btn--browse { margin-left: 0; }
+  .icon-btn--browse::before { display: none; }
+}
+
+/* 320px-360px, where the budget above still does not quite close. */
+@media (max-width: 380px) {
+  .icon-btn { width: 32px; height: 32px; flex: 0 0 32px; }
+  .icon-btn svg { width: 16px; height: 16px; }
+  .topbar__tools { gap: 4px; }
+  .wordmark__mark { width: 30px; height: 30px; }
+}
+
+/* --- the rest of the phone layout -----------------------------------------
+   Nothing was broken here, it was just loose: the result toolbar took three
+   stacked rows before the first poster, which on a 640px-tall screen is most of
+   the fold spent on controls. */
+@media (max-width: 600px) {
+  /* Filter and sort share a row. .sortfield was on 100% width, which forced a
+     second row for one dropdown. */
+  .toolbar__controls { margin-top: 13px; gap: 8px; flex-wrap: nowrap; align-items: center; }
+  .segmented { flex: 1 1 auto; min-width: 0; }
+  .segmented__btn { padding: 8px 6px; font-size: 12px; }
+
+  .sortfield { flex: 0 0 auto; width: auto; gap: 7px; }
+  /* The word "Sort" is what the dropdown already says. */
+  .sortfield > span { display: none; }
+  .sortfield select { padding: 9px 30px 9px 12px; }
+
+  /* The gap between the search area and the first result. */
+  .results { padding-top: 6px; }
+  .toolbar { padding-bottom: 14px; }
+  .toolbar__title { font-size: 19px; }
+
+  .hero__inner { padding-bottom: 6px; }
+  .suggestions { margin-top: 11px; }
+
+  .sect { margin-bottom: 24px; }
+  .sect__head { margin-bottom: 12px; }
+
+  .footer { padding: 22px 0 30px; }
+  .footer__line { font-size: 13px; }
+}
+
+/* --- the watchlist tag ----------------------------------------------------
+   Green means watched everywhere in this app, and gold already means queued -
+   it is the colour of the bookmark in the card bar and of the .is-listed ring
+   round the poster. The corner tag borrows it rather than introducing a third
+   meaning.
+
+   At the BOTTOM of the file on purpose: the phone block for .card__badge is
+   ~600 lines above, and at equal specificity the later rule wins at every
+   width, so anything written up there would be reverted here rather than the
+   other way round. New rules go here. */
+.card__badge--listed {
+  background: var(--gold);
+  color: #fff;
+  box-shadow: 0 4px 12px -4px rgba(181, 122, 18, 0.7);
+}
+.card__badge--listed svg {
+  fill: currentColor;
+  stroke: none;
+}
+
+.detail__seen--listed {
+  background: var(--gold-tint);
+  border-color: var(--gold-line);
+  color: var(--gold-ink);
+}
+.detail__seen--listed svg {
+  fill: currentColor;
+  stroke: none;
+}

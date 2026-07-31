@@ -1,0 +1,775 @@
+SidCinema - project description
+===============================
+
+What this is
+------------
+
+A static site that searches TMDB for films and web series and cross-references
+everything against a personal Google Sheet of what has already been watched.
+
+Plain HTML, CSS and JavaScript. No server, no framework, no build step. It runs
+on GitHub Pages. The only thing behind it is one Apps Script web app deployed
+from inside the spreadsheet, which both reads the sheet and writes to it.
+
+Three pages:
+
+    index.html       search and browse
+    watched.html     the whole watch history, with All / Favourites / Must watch
+    watchlist.html   things queued up to watch
+
+
+Layout
+------
+
+    index.html                 search and browse
+    watched.html               the library, with All / Favourites / Must watch
+    watchlist.html             the queue
+
+    css/style.css              one stylesheet for all three pages
+
+    js/config.js               every credential and constant
+
+    js/core/
+        util.js                escaping, text normalisation, storage, helpers
+        cache.js               TTL cache over memory plus sessionStorage
+        http.js                fetch with retry, backoff and timeout
+
+    js/data/
+        sheets.js              fetch the three tabs, map columns by header name
+        snapshot.js            the last known sheet, in localStorage
+        identity.js            what counts as "the same title"
+        watched.js             All Watched, indexed
+        watchlist.js           Watchlist, same shape
+        people.js              People tab: spelling correction and autocomplete
+        writer.js              the ONLY module that writes
+        auth.js                who may press the write buttons
+
+    js/tmdb/
+        client.js              auth, caching, genres, languages, normalisation
+        queries.js             discover, search, credits, details, feeds
+        execute.js             intent to endpoint, plus the result headline
+
+    js/search/
+        scope.js               the "Search by" vocabulary
+        intent.js              the offline parser
+        gemini.js              phrase to intent for natural language
+        rewrite.js             re-wording a phrase when the media toggle flips
+        search.js              the correction ladder
+        filters.js             the browse panel
+
+    js/ui/
+        nav.js                 the shared navbar, built from one list
+        cards.js               card markup
+        cardactions.js         the three-dot menu on every card
+        actions.js             the gate, the mark-watched dialog, write calls
+        detail.js              the title modal, shared by all pages
+        sections.js            released / upcoming / related
+        toast.js               pending, success and failure feedback
+
+    js/pages/
+        search.js              index.html
+        collection.js          BOTH watched.html and watchlist.html
+
+    assets/apps_script/        Code.gs, the read and write bridge
+    assets/images/             the favicon, and nothing else
+    assets/docs/               this file and SETUP.txt
+    assets/tests/              two dependency-free Node suites
+
+The root holds four things and nothing else: the three HTML pages, css/, js/,
+and assets/. Anything that is not served to a visitor on every page load lives
+under assets/, which is why the bridge, the docs and the tests are down there
+rather than at the top level.
+
+collection.js is one controller driven by window.PAGE_CONFIG set in each page:
+wording, and views: true for the library only. Don't fork it into two files. The
+two pages differ in their source and their wording, not in their behaviour.
+
+Dependencies flow one way only. js/ui may import from js/data and js/tmdb; those
+never import from js/ui. Nothing outside js/data/writer.js writes to the sheet.
+
+
+The data source
+---------------
+
+One Google Sheet, three tabs. SHEET_ID and the gids are in js/config.js.
+
+    All Watched   Name | Year | Genre | Poster Link | Tmdb Id |
+                  Original Title | Industry | (unnamed spacer) |
+                  Must Watch | Favorites
+
+    Watchlist     the same, minus the two flags
+
+    People        Name | Role | Industry | TMDB_ID | TMDB_Status
+
+Columns are found by header name, never by position. This is load-bearing, not
+stylistic: All Watched has an unnamed spacer column and columns get moved by
+hand. Both the JavaScript side (the alias tables in js/data/sheets.js) and the
+Apps Script (COLUMN_ALIASES in Code.gs) do this independently.
+
+Industry does two jobs. It decides the media type (Web Series means series,
+everything else means film) and it is the category the library groups by. Never
+hardcoded: whatever the column says is what gets counted.
+
+Reads go to the Apps Script bridge, one request for all three tabs. Three
+separate requests would each pay the script's cold start, which is the slowest
+part of a first load. If the bridge is unreachable, js/data/sheets.js falls back
+to Google's gviz endpoint by JSONP, which needs no deployment but does go through
+Google's few-minute cache.
+
+Reading through Apps Script rather than a published CSV is a change from the
+Flask version, and an improvement. A published CSV is cached by Google for
+minutes, so a write was invisible until the cache expired. The bridge reads the
+live sheet, so a change is there on the next load.
+
+
+Writing back
+------------
+
+js/data/writer.js is the only module that changes the sheet. Two rules it holds
+to:
+
+Google first, memory second. A failed remote write changes nothing locally. The
+reverse order would display changes that were never saved. Covered by a test.
+
+Update memory, don't re-download. Every confirmed write is applied to the
+in-memory copy via applyAdd, applyFlags or applyRemove. Re-reading would work now
+that reads are live, but a round trip per click is slower and buys nothing.
+
+Marking something watched appends to All Watched and deletes from Watchlist in
+ONE Apps Script call. Two calls can half-fail and leave a title in both. Also
+covered by a test.
+
+The duplicate check exists TWICE, on purpose. applyAdd refuses in memory and
+Code.gs refuses at the sheet. The memory half keeps the screen honest between a
+click and its write; the sheet half is the one that actually holds, because it
+is the only side a second device or a hand edit goes through.
+
+
+Who may write
+-------------
+
+js/data/auth.js holds one shared password and a signed-expiry session in
+localStorage. Every write goes through withOwner in js/ui/actions.js.
+
+This runs in the browser, so it is a convenience and not a security boundary. It
+stops an accidental click and a casual visitor. The thing that actually protects
+the sheet is APPS_SCRIPT_TOKEN, which Code.gs checks before it touches a cell.
+That token is in js/config.js and therefore public; that was a deliberate choice
+for a personal project, and assets/docs/SETUP.txt section 6 spells out exactly what it
+exposes and how to close it if that ever changes.
+
+Fails closed. With APPS_SCRIPT_URL or OWNER_PASSWORD unset the site is
+read-only and the buttons say so rather than failing silently.
+
+The gate UX: a visitor who clicks a write button gets "This is Laxman's film
+diary" with Yes, I'm Laxman / No, go back. The password field only appears after
+Yes. A bare password prompt on someone else's site reads as a wall; the sentence
+reads as an answer. Whatever was clicked replays after signing in.
+
+
+Search
+------
+
+The "Search by" control is what makes this work. Without it, one phrase had to
+answer two questions at once: what is being looked for, and what kind of thing it
+is. A wrong guess sent the query to the wrong endpoint - "The Call" went to
+/search/person because someone on TMDB is surnamed Call, and the film was never
+looked up at all.
+
+    title      -> /search/{movie|tv}     the phrase IS a title
+    person     -> /search/person         the phrase IS a name
+    discover   -> /discover/{movie|tv}   the phrase describes a kind of title
+    auto       -> whatever the phrase looks like
+
+Title and Person are parsed offline, by js/search/intent.js, and never cost a
+model call. Auto and Genre & mood go to Gemini, because that is where a phrase
+genuinely has to be decomposed: "best romantic films of bollywood" becomes a
+language, a genre and a sort; "90s action with tom hanks" becomes a person, a
+genre and a year range. The offline parser handles those too, less well, and is
+the fallback whenever Gemini is absent, rate limited or slow.
+
+More than one name is a different question. "akshay kumar and suniel shetty
+movies" means films they are BOTH in, and there is exactly one way to ask TMDB
+that: /discover/movie?with_cast=976,85034. The comma is an AND and a pipe is an
+OR, so the comma is the whole feature - a pipe would answer "films with either
+of them", which is a different search wearing the same words.
+
+Each name is resolved on its own first, /search/person per name, in parallel.
+The People tab is tried before TMDB, as everywhere else, which fixes the
+spelling as a side effect: the sheet says "Suniel Shetty", so typing "sunil
+shetty" resolves to the right id with nothing asked of TMDB or the model.
+
+Two routes, and which one runs is not a preference. Discover carries the genre,
+the era and the sort as server-side filters and costs one request - but it only
+exists for movies, and it indexes billed cast only. The intersection of the
+credit lists covers the rest: every series co-star search, because /discover/tv
+has no people parameter at all, and any pairing where one side is crew rather
+than cast. An empty intersection is returned empty rather than falling back to
+the union - "films with both" and "films with either" are different questions,
+and quietly swapping one for the other is worse than saying there are none.
+
+No vote floor is stacked on top of an AND. "best" normally adds one, and on a
+co-star list - a handful of films - a 300-vote floor returns an empty page. The
+set is small enough to sort exactly in the browser, so it is.
+
+The offline parser splits names too, so this survives Gemini being absent or
+rate limited. It is deliberately timid: every part has to survive the filler
+stripper AND still hold at least two words. That is what stops "The Good, the
+Bad and the Ugly" being read as three actors. It is allowed to be wrong,
+because it only PROPOSES names - each is then looked up strictly, and a part
+matching nobody is dropped rather than searched for, so a bad split costs a
+request and not a wrong page.
+
+A name that matches nobody gets one correction pass, and only that name: the
+ones that worked are left alone, the sheet is tried before the model, and none
+of it runs unless a name has already failed.
+
+Person matching tolerates a typo of one or two letters. This was the commonest
+way a real search failed and it was silent: "sunil shetty" is not a prefix, a
+suffix or a substring of "Suniel Shetty", so every test scored it zero and the
+person was dropped. The bound is an ABSOLUTE edit distance, not a ratio - two
+edits is a typo, four is a different word, and a ratio alone would let "the
+call" reach a person surnamed Call, which is the exact confusion the Search by
+control exists to prevent.
+
+Two functions in js/search/intent.js exist because of one specific bug.
+titlePhrase leaves a title's own words alone, because "the" is a stopword and the
+general parser was searching for "call". personPhrase does strip filler, because
+under Person the filler genuinely is filler.
+
+Every Gemini response is validated against a fixed schema before use. Anything
+outside it is dropped, so a hallucinated key cannot reach the TMDB client, and a
+person returned under Genre & mood is discarded rather than honoured - the scope
+was the user's instruction, not a suggestion.
+
+When a correction does happen the page says one thing: "Showing results for Shah
+Rukh Khan". Not which rung of the ladder found it, not what was typed instead, and
+not how long the search took or which parser read it. Those are facts about the
+machinery, and the only one that changes what the reader is looking at is the
+name.
+
+The correction ladder, in js/search/search.js, runs only after TMDB has already
+come back empty:
+
+    1. TMDB as typed. Its own search is fuzzy, so this usually ends it.
+    2. The People tab. Free, offline, cannot be rate limited, and a name written
+       down by hand is the one most likely to be wanted.
+    3. Gemini, asked only "what did they mean to type".
+    4. A loose TMDB person search, taking the closest thing available.
+
+Each rung costs more than the last, and the loop stops at the first that finds
+something, so a name the sheet knows never reaches Gemini. Comparing names with
+spaces removed makes "shahrukh khan" an exact match for "Shah Rukh Khan", which
+resolves at rung 2 for free.
+
+
+Design decisions worth not reversing
+------------------------------------
+
+The industry dropdown lists EVERY industry, from watched.industries(), not from
+stats.categories. That second one counts films only - it exists for the split by
+industry - so "Web Series" lived in a separate series_categories bucket and never
+reached the dropdown at all. The dropdown filters rows, and a series is a row.
+
+The counts belong to the view, not the sheet. Standing in Must watch and being
+told there are 1,013 titles and 54 favourites answers a question nobody asked,
+and made the view look like it had not filtered anything. Each view names itself
+in its first tile and cross-references the other flag: Must watch shows how many
+of its titles are also favourites, and the reverse.
+
+Green means watched, and it has to mean it everywhere. The filled watched tick
+had no rule of its own, so it inherited the action row's muted grey - the one
+state the whole app exists to show was the only control that did not announce
+itself.
+
+Cards do not print the original title. "Colony / 群体" on a card is two lines
+where one will do, and the second is not the line anyone is scanning for. The
+modal still shows it, which is where someone who wants it is looking.
+
+There is no placeholder image anywhere. A missing poster shows the TITLE in its
+place - a generic film-reel graphic says nothing, while the title says exactly
+which film TMDB has no artwork for. This applies to cards, to the modal's own
+poster, and to the related-titles tiles.
+
+The pattern throughout: the fallback is rendered BEHIND the image, and the <img>
+is only emitted when there is a URL. An image with an empty alt draws nothing when
+it fails, so the text underneath shows through with no error handler - which
+covers a dead URL as well as an absent one. Cast initials work the same way. Note
+the ordering in cards.js: the fallback comes first in the markup so the image
+covers it, and swapping those two would hide every poster behind its own title.
+
+One card height, everywhere. A grid where every card is a different height reads
+as broken even when each one is fine on its own, because the eye cannot scan a
+row whose baselines move. Every text block is bounded to a known number of lines
+and grid-auto-rows: 1fr matches every row to its tallest card. The title, the
+facts line and the genre row scroll sideways rather than wrapping, with the
+scrollbar hidden and a short mask at the right edge hinting there is more - the
+overflow is a fallback, not a control. The overview clamps to three lines, two on
+a phone; the rest is in the modal, where anyone reading past three lines is
+heading anyway. The action bar is pushed down with margin-top:auto, so a short
+title means more whitespace above the bar rather than a shorter card.
+
+Favourites and Must Watch are views, not pages. They are flags on an All Watched
+row. Separate pages would mean the same title having three cards, and a heart
+ticked on one not updating the others. As views there is one card per title. The
+choice rides in the URL as ?view=favorite, so a link is shareable and the back
+button works between views.
+
+They also get their own entries in the top bar, and the bar is identical on every
+page. Each page previously hand-wrote its own navbar and they disagreed: the
+library had no Favourites link, so getting from Must watch to Favourites meant
+going back to the search page first. js/ui/nav.js now builds it from one list, so
+every collection is one click from every other.
+
+Every entry stays visible everywhere, and the current one is marked rather than
+hidden. An earlier version dropped the entry for the page you were on, which is
+tidy but wrong for a navbar: the row changed shape as you moved between pages,
+and nothing told you where you had arrived.
+
+There is no Search entry. The wordmark is the way back to the search page, which
+is what a wordmark is for, and one fewer icon leaves room for the four
+collections to keep their text labels on a narrow screen.
+
+Each view also states which collection it is. A view that changes the grid but
+not the heading leaves you unsure what you are looking at, so the eyebrow, title
+and lead all come from the VIEWS table in collection.js.
+
+The wordmark is first and left-aligned. The browse control is last, at the far
+right, separated by a hairline because it opens a drawer rather than navigating -
+and that drawer slides in from the same edge. Reaching across the width to a
+panel arriving from the opposite side reads as wrong every time.
+
+Marking watched asks for Industry and then Genre, in that order and numbered.
+Neither can be guessed: TMDB knows a film's production country, not whether it
+belongs under Bollywood or Other Language, and its genre list rarely matches the
+single word the owner would pick.
+
+The two are a sequence, not a pair. The genre list is rebuilt from the rows that
+already sit under the chosen industry, so picking Hollywood offers the genres
+Hollywood rows actually use rather than all forty in the sheet. A brand new
+industry has no rows yet, so that case falls back to the full list rather than
+offering nothing. "+ Add new..." is always last, so no value is unreachable.
+
+Both lists come from the sheet's own contents, so an industry typed in by hand
+appears next time with no code change.
+
+Both Name and Original Title get TMDB's ENGLISH title. TMDB's original_title
+field is the title in the film's own script, so marking a Hindi film watched wrote
+"\u0938\u092a\u0942\u0924" into the sheet where "Sapoot" was wanted. That column is read back for
+title matching and typed into by hand, and neither works in a script the owner
+does not type in. Nothing is lost: the detail modal shows the native title live
+from TMDB whenever it differs from the English one.
+
+Title normalisation is unicode-aware, and had to be. It used \w, which is
+ASCII-only, so every character of a Devanagari, Korean or Japanese title was
+replaced by a space and the whole title normalised to the empty string - meaning
+any sheet row with a non-Latin title and no TMDB id was never indexed and was
+invisible to title matching. It is [^\p{L}\p{N}\s] with the /u flag now. The flag
+is not optional; without it \p{...} is not a character class at all.
+
+Identity is the id, OR the title and the year together. js/data/identity.js
+holds the only definition and both libraries use it.
+
+A TMDB id alone was the whole identity once, and it is not enough: TMDB holds
+some films twice. "Ved" (2022) sits in the sheet as 1037690 and comes back from
+search as 913544 - same film, same poster path, two records. The sheet said "not
+here" about a row that was, so the card showed no watchlist state and the click
+appended a second row. One film, two rows, neither aware of the other.
+
+The year is load-bearing, not decoration. Indexing by title alone is the bug this
+project already fixed once - one watched "The Call" marked every other film of
+that name as watched. Title AND year is specific enough that a collision means
+two different films released the same year under the same name. The bare title
+survives in exactly one place: a row that has no year at all is filed under the
+loose key and only ever reachable by it, so a row that HAS a year is never
+matched across years. Covered by a test.
+
+The cost of this is stated rather than hidden: two genuinely different films
+sharing a title and a release year are now one title. The sheet carries nothing
+else to tell them apart with.
+
+Media type is part of the match, and "unknown" is a real answer. TMDB's movie
+and TV id sequences are separate and both start at 1, so low ids collide
+constantly - The Lord of the Rings is 120, 121 and 122. A watched series holding
+122 used to hide the queued film 122 from the watchlist page, with no error
+anywhere. But a blank Industry cell genuinely says nothing, and every row the
+site adds from search has one, because a TMDB result carries no industry to copy.
+So mediaOf() answers "" for a blank cell and "" matches either kind, while
+mediaForIndustry() keeps defaulting to "movie" for DISPLAY, where a value is
+required. Two functions because they answer two different questions.
+
+Queuing a series now writes "Web Series" into Industry. Industry is the only
+thing in the sheet that records film-versus-series, so a blank one meant every
+series on the watchlist read back as a film.
+
+The id on the card is not always the id in the sheet. annotate() sets sheet_id
+and watchlist_id to the id of the row that is actually there, and every write
+addresses that one - otherwise a flag write asks the bridge to edit a row that
+was never created. The title and year ride along with every write as the
+fallback the bridge matches on when the id misses.
+
+Removing takes every row for a title, not the first. A duplicate that predates
+this has to leave with the row that was clicked, or it comes straight back on
+the next load. Both js/data/watchlist.js and Code.gs do this.
+
+A re-watch is one title. Both the library and the stats de-duplicate on identity,
+so the per-industry buckets sum to the totals rather than exceeding them.
+
+The people-sheet ladder is lazy. correctionCandidates is a generator, so a caller
+that stops at the first working correction never pays for the model call.
+
+State lives in each browser tab. The Flask version ran one worker on Render
+because all state was in memory; now every tab is its own copy. Two devices will
+not see each other's writes until one of them reloads, which is the same trade
+made before, with the worker count no longer able to break it.
+
+
+Card controls
+-------------
+
+The bottom row of a card is where the TMDB rating and vote count used to sit.
+They are still on the detail modal, which has room for a vote count to mean
+something; on a card they were numbers nobody acted on, occupying the one place
+actions belong.
+
+This row has been through three shapes. Four icons on the poster competed with
+the art and named nothing. A three-dot menu named everything but cost two taps
+and, because .card and .card__poster are both overflow:hidden, had to render in a
+floating layer on <body> to avoid being clipped away. The row won because it does
+both jobs: each icon has a fixed position, filled when on, so the fill IS the
+state and one tap changes it.
+
+What appears follows what the sheet can record. A watched title gets Favourite
+and Must watch on the left, because both are columns on an All Watched row and
+need the row to exist. An unwatched one gets Watchlist on the right, because
+watchlisting something already seen is a contradiction. The watched tick is
+always last on the right, in the same place on every card, so the eye learns one
+position. Tapping it on an unwatched title opens the industry-and-genre dialog;
+tapping a filled one removes the row.
+
+cardactions.repaint() rebuilds the bar as well as the trigger, or a heart filled
+from the card would not stay filled.
+
+One three-dot button per card, opening a menu of named actions. Four icons sat on
+every poster before this: they competed with the art, gave no action a name, and
+on a phone four 33px targets in a row left no margin for error.
+
+The menu is NOT inside the card. Both .card and .card__poster are
+overflow:hidden - the poster needs it for its rounded corners - so a dropdown
+rendered in place is clipped to nothing and the button looks broken. It lives in
+one fixed-position layer on <body>, positioned against the trigger that opened
+it, and flips above the button when the card sits near the bottom of the
+viewport. The flip is measured, not guessed from the card index: which row a card
+lands in depends on the viewport width.
+
+Its listeners are on the document, not on the buttons. Triggers are rebuilt by
+repaint() after every write, so anything bound to one would be lost the moment it
+was used. Scroll and resize close the menu rather than repositioning it - a menu
+anchored to a card that has moved is worse than no menu.
+
+The "what my sheet calls it" tip has the same shape of problem. It appears on
+hover on a pointer device, and a touch screen has no hover, so the (i) button
+carries it there - the whole feature was invisible on a phone before that.
+Tapping it again closes it, as does tapping anywhere else: a tip that can only be
+opened is a tip stuck open.
+
+
+The detail modal
+----------------
+
+The TMDB score sits in the facts line beside the year and the runtime, not in a
+tile three sections down. It is the one number people read before deciding.
+
+Below that, "The numbers" is a fixed grid with the label above the value, and
+every cell is always present. A cell that vanishes when TMDB has no figure makes
+every title a different layout; an em dash says the same thing and holds the row.
+That matters most for box office, because a film that has not opened has none -
+the commonest case in anything upcoming - and "$0" would be a lie where "—" is
+merely absent.
+
+Trailer, IMDb, TMDB, Official site. On a phone the trailer takes the whole first
+row and the three links share the second, which is what the grid rule assumes -
+so .btn-solid has to stay the only solid button in that row, and it has to be
+first. Their icons are dropped below 600px: at that size the label is what
+matters and the icon is the first thing that can go.
+
+Cast faces are circles cut from 2:3 headshots, and object-position does more work
+here than anything else. Centring the crop puts the middle of a torso in the
+circle and slices the top of every head off, because TMDB frames profile shots
+head-and-shoulders with the face high up. 20% down is where faces actually are.
+
+A cast member with no photo gets their initials. The
+letters sit BEHIND the photo rather than being swapped in by an error handler: an
+<img> with an empty alt renders nothing when it fails, so the initials show
+through with no scripting, and that covers a broken URL as well as a missing one.
+One neutral treatment, not a colour per person - green and gold already mean
+watched and must-watch everywhere else, and borrowing them for decoration would
+spend meaning that is already committed.
+
+The trailer's close button is on a bar ABOVE the frame, not on it. Inside the
+frame it landed in the same corner as YouTube's own settings and fullscreen
+controls, and either could be hit by mistake.
+
+It can be put away, and how depends on the device. On a pointer device a
+click anywhere else in the modal closes it - the quickest gesture for the
+commonest intention. On touch it does NOT: a phone gets handled carelessly and a
+stray thumb would kill a video mid-scene, so there the explicit close button is
+the only way out. window.matchMedia("(hover: none)") is the signal, since a
+pointer can hover and a finger cannot. Closing empties the slot rather than
+hiding it, because hiding leaves the audio playing behind a closed panel.
+
+
+Feedback while writing
+----------------------
+
+An Apps Script write takes one to two seconds. The Flask version signalled this
+with .card.is-saving { opacity: 0.62; pointer-events: none; } - and fading
+something out and switching it off is the visual language of broken, so a working
+save read as a freeze. That was the single worst thing about using the app.
+
+What happens now, on every write:
+
+    The card repaints immediately and optimistically, so the click registers
+    at once. The flags are snapshotted first and restored exactly if the write
+    fails - approximately is not good enough, because "undo the favourite" and
+    "undo everything" look identical on screen but differ in the sheet.
+
+    The pressed button replaces its icon with a spinning ring. The control
+    reports its own state rather than relying on a strip elsewhere on screen.
+
+    A toast appears with a spinner and the verb in progress: "Adding to
+    watched...". The same toast then becomes "Added to watched - The Call", or
+    turns red with the reason it failed. One action, one strip: the toast is
+    returned to the caller as a handle so it settles in place rather than being
+    replaced by a second one.
+
+    The card no longer fades, and it no longer stops accepting clicks. Only the
+    pressed button goes inert, so a second title can be added while the first is
+    still saving. Blocking the whole card was the other half of why a
+    one-second write felt like a freeze.
+
+    The button is released by re-finding it after the write, not by reusing the
+    reference: repaint() replaces the element, so the old handle is detached
+    from the document by then.
+
+The verb stays the same through the flow. The button that says Add produces a
+toast that says Added.
+
+
+Speed
+-----
+
+    The sheet is snapshotted to localStorage and hydrated SYNCHRONOUSLY before
+    the first paint. This is the one that mattered most: a refresh used to paint
+    the TMDB grid and then turn the watched cards green a second later, when the
+    Apps Script read landed. Flags arriving after posters reads as the page
+    correcting itself, which is worse than a slower page. The live read still
+    runs, in the background, and replaces the snapshot; the search page only
+    repaints if the two actually disagree, because repainting an identical grid
+    is a frame the user sees as a flicker.
+
+    Every confirmed write updates the snapshot as well as memory, or a refresh
+    would appear to undo it.
+
+    Reads and TMDB run in parallel. The grid paints as soon as the feed lands,
+    then repaints with the watched flags when the sheet arrives. A grid that
+    paints early beats a blank page waiting for both.
+
+    One bridge request for three tabs, so a first load pays the Apps Script cold
+    start once.
+
+    js/core/cache.js caches over memory and sessionStorage, so a second visit in
+    the same session paints from cache immediately. Empty result sets are
+    deliberately not cached - a title added to TMDB tomorrow should be findable
+    tomorrow.
+
+    Enrichment is capped. Runtimes cost one call per title, so only the visible
+    top of a list is enriched, four at a time.
+
+    Posters are lazy, decoding async. Fonts, TMDB and the image CDN are
+    preconnected. The page controllers are modulepreloaded.
+
+    No build step, so no bundle to download and nothing to invalidate.
+
+
+Traps
+-----
+
+These bit during the original build and still apply.
+
+Class names in the stylesheet are load-bearing. style.css was written against
+specific names and has never been seen rendered, so renaming a class in JS
+without renaming it in CSS produces an unstyled element rather than an error.
+That happened once already during this migration: the detail modal was ported to
+.detail__person / .detail__similar / .detail__stat while the stylesheet still
+carried .castcard / .similar-card / .factgrid, and the old rules were then
+deleted as dead. Both halves have to move together. The audit worth re-running
+after any rename is: every class the JS emits, checked against every class the
+CSS defines, in both directions.
+
+Never bulk-edit this stylesheet with a script. Three separate attempts to strip
+unreachable rules have corrupted it, each in a different way: swallowing the
+newline after a kept rule so `}` glued to the next selector; matching class names
+inside COMMENTS and deleting live rules; and treating the closing brace of an
+@media block as part of the next selector, so removing that rule removed the
+brace and every rule after it fell inside the media query. There is roughly 4KB
+of unreachable CSS in here - rules for the old poster action icons, the
+three-dot menu, and Flask-era markup. It costs one gzipped kilobyte and harms
+nothing. Leaving it is cheaper than the fourth attempt. If it ever has to go,
+delete the rules by hand and run assets/tests/css.test.mjs after each one.
+
+CSS ordering. The library page's base styles are declared around 270 lines after
+the phone media query. At equal specificity the later rule wins at every width,
+so mobile overrides written in the earlier block were silently reverted. Anything
+new goes at the BOTTOM of style.css - the toast, saving and collection rules are
+already down there. Keep them there.
+
+Stacking contexts. Two bugs, both from elements creating stacking contexts
+implicitly. .searchbox has backdrop-filter, so the autocomplete dropdown inside
+it could not escape and .suggestions (mask-image, also a stacking context)
+painted over it; fixed by ranking them, .searchbox at 30 and .suggestions at 1.
+Separately .hero and .results both sat at z-index 1 and the later one buried the
+dropdown; .hero is now 20.
+
+stopPropagation does not stop sibling listeners. The card controls call
+stopPropagation but the card handler is bound to the same container and
+registered first, so the modal still opened. Fixed with an explicit guard, in
+js/ui/detail.js, applied on both click and keydown:
+
+    const IN_CARD = ".cardact, .cardmenu, .card__note";
+
+If you add another in-card control, add it to that one constant.
+
+A class that only exists in CSS is a control that does nothing. The browse panel
+sits at translateX(-100%) and only .panel.is-open slides it in, so clearing
+`hidden` alone left it fully rendered just off the left edge - in the DOM,
+invisible on screen, no error anywhere. [hidden] is display:none and a transition
+cannot run from display:none, so the class has to land on a later frame than the
+unhide, and on close the hide has to wait for the slide to finish. Any drawer
+added later needs the same three-part dance.
+
+Bootstrap modals trap focus. With the detail modal open behind one of our
+dialogs, the password field could be clicked but not typed into. closeAnyModal in
+js/ui/actions.js runs before every dialog, and focus is set after the hide
+transition (220ms), not during it.
+
+A navbar that does not fit becomes a horizontal scrollbar on the whole document,
+and that looks like a dark band down the right of every page - not like a broken
+navbar. The topbar carries a wordmark and seven buttons, which on a 360px phone
+needed 465px. Below 600px the wordmark text is hidden (the mark stays as the way
+home, ~114px recovered, more than every other saving together), the buttons drop
+to 34px and then 32px below 380px, and .topbar__tools has its own overflow-x as a
+last resort - if a future button pushes it over again the STRIP scrolls, not the
+page. body has overflow-x: clip as a final guard: clip rather than hidden, because
+hidden on body makes it a scroll container and the sticky topbar stops sticking.
+assets/tests/css.test.mjs checks all four parts.
+
+iOS zooms on any focused control under 16px, and never zooms back out. Every
+typeable control is pinned to 16px on mobile, inputs and selects both. Easy to
+reintroduce by tidying a font-size down to 15px.
+
+Apps Script serves the last DEPLOYED version, not the last saved one. Editing
+Code.gs and pressing save changes nothing the site can see. Deploy > Manage
+deployments > pencil > New version > Deploy. Creating a NEW deployment gives a
+new URL and breaks APPS_SCRIPT_URL.
+
+ES modules will not load over file://. Serve the folder, even locally.
+
+Apps Script cannot answer a CORS preflight. Writes go out as
+Content-Type: text/plain, which is the one JSON carrier that never triggers one;
+doPost parses the body itself. Changing that header to application/json will
+break every write.
+
+
+State of things
+---------------
+
+Tested, by nine suites in assets/tests/: search parsing across all four scopes,
+the title-versus-person distinction, decade and language extraction, the section
+split, column mapping with the spacer present, id-not-title matching, re-watch
+de-duplication, no memory drift on a failed write, one call for mark-watched,
+flag independence, the gate, the genre list narrowing to one industry, which
+navbar entry is marked on each page, and every shape the card action bar can take.
+
+people.test.mjs asserts the REQUESTS rather than the results, because the whole
+feature is which endpoint is called with which parameters. A test that only
+checked the titles would pass just as happily on a call that fetched one actor
+and ignored the other. It covers the AND, the absent vote floor, the genre
+riding along as a server-side filter, the series path avoiding discover
+entirely, and a one-letter misspelling still resolving.
+
+watchlist.test.mjs is built on a slice of the real sheet, because the bug it
+guards only shows up on real data: the two Ved rows, the run of low ids that
+collide with TV ids, and the blank-Industry rows the site writes itself. It
+asserts that a film TMDB holds twice is recognised under either id, that the
+same title is never queued twice, that a different year is a different film,
+that a watched series does not hide a queued film of the same id, that two rows
+for one film are one card, and that removing one duplicate removes them all.
+
+css.test.mjs is the odd one out and the most useful: it checks the stylesheet
+itself, because the two bugs that have actually shipped here are both silent.
+It asserts that every top-level region outranks .wash, that every class the code
+emits has a rule somewhere, that no block is left unclosed, and that no typeable
+control drops under 16px inside a phone media query. It found a real 14px select
+the moment it was written.
+
+flow.test.mjs and modal.test.mjs are the two with a dependency, and both are
+optional: with jsdom
+installed it boots a real page and asserts what reasoning about the code cannot -
+that the library is green in its first frames while a 1.2s read is still in
+flight, that the view's numbers change with the view, that the card menu really
+lands in <body>, and that a write raises a toast that settles. Both skip cleanly when jsdom is absent.
+
+modal.test.mjs earned its place immediately: it caught prettyDate being called in
+detail.js while only being defined in cards.js. node --check does not see an
+undefined identifier, and neither does reading the diff - the modal simply showed
+"Could not load that title" for every film. Anything that renders from a payload
+is worth a test that actually renders it.
+
+94 assertions, run with plain node. Only flow.test.mjs needs anything installed.
+
+Never verified in a real browser. The Flask version was built without one
+available and so was this migration. jsdom closes part of the gap - it is a real
+DOM, and flow.test.mjs uses it - but jsdom has no layout engine, so it can
+confirm structure and never geometry. Overlap, wrapping, and anything measured
+against the viewport are still unverified. If something looks wrong visually,
+that is the likeliest source, not the logic.
+
+
+Outstanding
+-----------
+
+There is no apple-touch-icon. The 136KB PNG that served it was removed, so
+adding the site to an iOS home screen gives a screenshot rather than an icon.
+Dropping in a small PNG and one <link> per page brings it back if that matters.
+
+Every key in js/config.js is public by design. assets/docs/SETUP.txt section 6 says what
+each one actually exposes and how to close the write token if that changes.
+
+Old per-industry tabs may still exist in the workbook, unused. Safe to delete.
+
+The gviz fallback in js/data/sheets.js is about forty lines earning their place
+only if the site might run before the Apps Script is deployed. Once the bridge is
+up and stable it can go.
+
+
+Ideas discussed, not built
+--------------------------
+
+Franchise completion (the "FR - " genre tags are already franchise markers, and
+TMDB's collection endpoint would show which entries are missing). URL state for
+search. Library sort persisted per device. Streaming availability via
+/watch/providers. A service worker, which on a static site would be a real
+offline mode rather than just a cache.
+
+
+Working style that suited this project
+-------------------------------------
+
+Comments explain why, not what - especially where the code looks wrong until you
+know the reason: Google-before-memory, id-not-title matching, the z-index
+rankings, the text/plain content type. Those earned their place. Essay-length
+blocks did not.
+
+Verify before claiming. Every round ended with a script that actually exercised
+the change. Several bugs were caught that way and would otherwise have shipped.
