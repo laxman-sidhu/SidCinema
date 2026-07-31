@@ -4248,3 +4248,63 @@ body.portrait-open { overflow: hidden; }
   .portrait__panel { transition: opacity 0.2s; transform: none; }
   .navmenu__list { animation: none; }
 }
+
+/* --- one height for the two controls above the grid -----------------------
+   The status buttons and the sort dropdown are one row and have to read as
+   one, and they never quite did: the segmented control is a padded box around
+   padded buttons (~43px) while the select was padded once (~37px), so they sat
+   six pixels apart at every width. Both take an explicit height now and the
+   padding only decides the sides. */
+:root { --row-h: 44px; }
+
+.toolbar__controls .segmented {
+  height: var(--row-h);
+  box-sizing: border-box;
+  align-items: stretch;
+}
+.toolbar__controls .segmented__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+}
+.sortfield select {
+  height: var(--row-h);
+  box-sizing: border-box;
+  padding: 0 16px;
+}
+
+@media (max-width: 600px) {
+  :root {
+    --row-h: 38px;
+    /* How much smaller the sort dropdown's text is drawn. Named because the
+       height below has to divide by exactly the same number. */
+    --sort-scale: 0.82;
+  }
+
+  .toolbar__controls .segmented__btn { padding: 0 6px; }
+
+  /* The height is set PRE-scale, so what is drawn ends up at --row-h and
+     matches the buttons beside it: (h / s) * s = h. The layout box is the tall
+     one, and the negative margin gives back exactly the difference so the row
+     does not grow around a control that is not using the space. */
+  .sortfield select {
+    height: calc(var(--row-h) / var(--sort-scale));
+    padding: 0 14px;
+    font-size: 16px;
+    transform: scale(var(--sort-scale));
+    transform-origin: right center;
+    margin-block: calc((var(--row-h) - var(--row-h) / var(--sort-scale)) / 2);
+  }
+
+  /* The same treatment for "Search by", for the same reason: the text is drawn
+     smaller while the computed font-size stays at 16, which is the value
+     Safari reads when the control takes focus. The origin is the right edge
+     because .scopepick__caret is positioned against the row rather than the
+     select - hold that edge still and the caret stays where it was. */
+  .scopepick__select {
+    font-size: 16px;
+    transform: scale(0.9);
+    transform-origin: right center;
+  }
+}

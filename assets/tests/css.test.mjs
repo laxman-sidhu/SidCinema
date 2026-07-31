@@ -119,6 +119,26 @@ t("a scaled control still declares 16px", () => {
   }
 });
 
+// The two controls sit in one row and have to line up. Both take an explicit
+// height from the same token, and the scaled one divides by exactly the scale
+// it is drawn at - get that wrong and it is short by the rounding.
+t("the sort dropdown and the status buttons share one height", () => {
+  const segmented = lastDeclaration(".toolbar__controls .segmented");
+  const sort = lastDeclaration(".sortfield select");
+  assert.match(segmented, /height:\s*var\(--row-h\)/, "the button row has no fixed height");
+  assert.match(sort, /height:/, "the sort control has no fixed height");
+
+  // Where it is scaled, the height must be the pre-scale one or the drawn
+  // control comes out short.
+  const scaled = css.match(/\.sortfield select \{[^}]*transform:\s*scale\(var\(--sort-scale\)\)[^}]*\}/);
+  if (scaled) {
+    assert.match(scaled[0], /height:\s*calc\(var\(--row-h\)\s*\/\s*var\(--sort-scale\)\)/,
+      "a scaled control must divide its height by the same scale it is drawn at");
+    assert.match(scaled[0], /margin-block:\s*calc\(/,
+      "the extra layout height has to be given back, or the row grows around it");
+  }
+});
+
 t("braces balance and no at-rule is left open", () => {
   let depth = 0, i = 0;
   while (i < css.length) {
