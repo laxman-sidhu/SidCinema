@@ -105,6 +105,20 @@ t("the nav dropdown cannot be clipped by the strip it sits in", () => {
   assert.ok(z > 60, "the topbar sits at 60, so a lower menu paints behind it");
 });
 
+// A control may be drawn smaller with a transform, never with a smaller
+// font-size: Safari reads the computed font-size when the field takes focus,
+// and a transform does not change it. This checks the trick was not "tidied"
+// into the thing it exists to avoid.
+t("a scaled control still declares 16px", () => {
+  for (const m of bare.matchAll(/([^{}]*)\{([^}]*transform:\s*scale[^}]*)\}/g)) {
+    const [, selector, body] = m;
+    if (!/select|input|textarea/.test(selector)) continue;
+    const size = (body.match(/font-size:\s*(\d+(?:\.\d+)?)px/) || [])[1];
+    assert.ok(size && Number(size) >= 16,
+      `${selector.trim()} is scaled but declares ${size || "no"} font-size - iOS will zoom`);
+  }
+});
+
 t("braces balance and no at-rule is left open", () => {
   let depth = 0, i = 0;
   while (i < css.length) {

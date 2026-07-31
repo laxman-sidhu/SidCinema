@@ -4093,7 +4093,21 @@ body { overflow-x: clip; }
   .segmented { border-radius: 999px; }
 
   .sortfield { gap: 6px; }
-  .sortfield select { padding: 6px 22px 6px 10px; }
+  .sortfield select {
+    padding: 6px 12px;
+    /* The text is SCALED, not set smaller.
+       font-size stays 16px because iOS zooms the page whenever a focused
+       select is under that and never zooms back out - the computed value is
+       what Safari reads, and a transform does not change it. scale() shrinks
+       what is drawn, which is what was actually asked for.
+       The layout box keeps its full size, so the origin decides where the
+       slack lands: on the right, the pill shrinks toward the row's edge and
+       the gap opens between it and the segmented buttons, where a gap already
+       was. */
+    font-size: 16px;
+    transform: scale(0.82);
+    transform-origin: right center;
+  }
 
   /* --- the library toolbar ---
      Every label, caret and count shrinks. The two SELECTS and the search field

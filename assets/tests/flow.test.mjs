@@ -287,6 +287,75 @@ await t("title matching still works for a row written in its own script", async 
     "an old native-script row should still be recognised");
 });
 
+// Standing in Bollywood and being offered forty genres is a list of forty ways
+// to empty the grid: only four of them are on a Bollywood row.
+await t("the genre list narrows to the industry that is chosen", async () => {
+  const window = boot("watched.html");
+
+  // Its own workbook rather than the shared one: the data modules are
+  // singletons and hold whatever the tests above left in them, so a genre list
+  // is only readable against rows this test controls.
+  const TAB = {
+    header: ["Name", "Year", "Genre", "Poster Link", "Tmdb Id", "Original Title", "Industry", "", "Must Watch", "Favorites"],
+    rows: [
+      ["A", "2009", "Comedy", "p", "9001", "A", "Bollywood", "", "", "Yes"],
+      ["B", "2011", "Romance", "p", "9002", "B", "Bollywood", "", "", ""],
+      ["C", "2014", "Western", "p", "9003", "C", "Hollywood", "", "", ""],
+      ["D", "2016", "Mystery", "p", "9004", "D", "Hollywood", "", "", ""]
+    ]
+  };
+  globalThis.fetch = async u => {
+    if (String(u).includes("action=read")) {
+      return { ok: true, status: 200, json: async () => ({ ok: true, tabs: {
+        watched: TAB,
+        watchlist: { header: ["Name", "Tmdb Id"], rows: [] },
+        people: { header: ["Name"], rows: [] }
+      } }) };
+    }
+    return { ok: true, status: 200, json: async () => ({ results: [] }) };
+  };
+
+  const { start } = await import(`${ROOT}/js/pages/collection.js?11`);
+  await start();
+
+  const genres = () => [...window.document.querySelectorAll("#collGenre option")]
+    .map(o => o.value).filter(Boolean).sort();
+  const industry = window.document.getElementById("collCategory");
+  const genre = window.document.getElementById("collGenre");
+  const change = node => node.dispatchEvent(new window.Event("change", { bubbles: true }));
+
+  assert.deepEqual(genres(), ["Comedy", "Mystery", "Romance", "Western"],
+    "every genre should be offered while every industry is");
+
+  industry.value = "Bollywood";
+  change(industry);
+  await wait(20);
+  assert.deepEqual(genres(), ["Comedy", "Romance"],
+    "Hollywood genres were still offered under Bollywood");
+
+  // Picking a genre and then changing industry must not leave a filter naming
+  // something the list no longer offers - that is an empty grid for no visible
+  // reason.
+  genre.value = "Comedy";
+  change(genre);
+  await wait(10);
+  assert.equal(window.document.querySelectorAll(".card").length, 1);
+
+  industry.value = "Hollywood";
+  change(industry);
+  await wait(20);
+  assert.deepEqual(genres(), ["Mystery", "Western"]);
+  assert.equal(genre.value, "", "a genre that no longer exists stayed selected");
+  assert.equal(window.document.querySelectorAll(".card").length, 2,
+    "the grid should show both Hollywood rows, not none");
+
+  // Back to every industry, and every genre comes back with it.
+  industry.value = "";
+  change(industry);
+  await wait(20);
+  assert.deepEqual(genres(), ["Comedy", "Mystery", "Romance", "Western"]);
+});
+
 // The complaint this fixes: on the library and the watchlist the reload button
 // was never bound, so a click did nothing at all - and a control that answers
 // with silence gets clicked again and again.

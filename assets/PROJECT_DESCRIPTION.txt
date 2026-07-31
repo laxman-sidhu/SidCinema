@@ -272,6 +272,29 @@ stats.categories. That second one counts films only - it exists for the split by
 industry - so "Web Series" lived in a separate series_categories bucket and never
 reached the dropdown at all. The dropdown filters rows, and a series is a row.
 
+The genre dropdown narrows to the industry chosen, and to the view. Offering
+every genre in the sheet while standing in Bollywood is offering forty ways to
+empty the grid, because only four of them appear on a Bollywood row - and the
+counts beside each one were the sheet's counts rather than the ones that filter
+would actually return. The list is rebuilt from the rows that survive the
+industry and the view, which is the same narrowing the mark-watched dialog
+already does. Industry and genre are a sequence, not a pair: picking an industry
+rebuilds the genres, and not the reverse, or the two would narrow each other
+into a corner. A genre that no longer exists under the new industry is cleared
+rather than left selected - a filter naming something the list no longer offers
+is an empty grid for no visible reason. Covered by a test.
+
+A sort on its own is a real query. The browse panel counted genre, language,
+year and rating as filters and a sort as nothing, so "Biggest box office" with
+everything else untouched fell through to the trending feed - which looks
+exactly like the sort being ignored, because the same twenty titles come back.
+The panel queries the whole catalogue, so "the highest grossing films there are"
+has an answer and it is not the trending feed. Most popular is still the
+exception: it is what discover does when asked for nothing, so it is the one
+sort that means no sort. Revenue is also dropped from the list under Series,
+because a series has no box office and an option that silently means something
+else is worse than an option that is not there.
+
 The counts belong to the view, not the sheet. Standing in Must watch and being
 told there are 1,013 titles and 54 favourites answers a question nobody asked,
 and made the view look like it had not filtered anything. Each view names itself

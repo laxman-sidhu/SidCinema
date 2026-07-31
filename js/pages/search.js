@@ -330,7 +330,10 @@ function readPanel() {
 
 function paintActiveFilters() {
   const entries = Object.entries(state.selection);
-  const count = entries.filter(([key]) => key !== "sort").length;
+  // A non-default sort is a filter now, so it counts on the badge. "Most
+  // popular" does not, because that is what the catalogue does unasked.
+  const count = entries.filter(([key, value]) =>
+    key !== "sort" || (value && value !== "popularity")).length;
 
   dom.filterCount.hidden = count === 0;
   dom.filterCount.textContent = String(count);
@@ -345,7 +348,7 @@ function paintActiveFilters() {
   dom.activeFilters.hidden = false;
   dom.activeFilters.innerHTML = entries.map(([key, value]) =>
     `<button type="button" class="chipx" data-drop="${key}">`
-    + `${esc(key === "language" ? tmdb.languageLabel(value) : value)}`
+    + `${esc(filters.labelFor(key, value))}`
     + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>'
     + "</button>").join("");
 }

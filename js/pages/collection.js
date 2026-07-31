@@ -6,7 +6,7 @@
 // Watched row, so separate pages would mean the same title having three cards
 // and a heart ticked on one not updating the others.
 
-import { esc, debounce } from "../core/util.js";
+import { esc, debounce, orderCategories } from "../core/util.js";
 import { gridMarkup } from "../ui/cards.js";
 import * as cardactions from "../ui/cardactions.js";
 import * as detail from "../ui/detail.js";
@@ -73,6 +73,9 @@ function grab() {
 function setView(key, push = true) {
   state.view = key;
   state.shown = PAGE_SIZE;
+  // Favourites hold a different set of genres from the whole library, so the
+  // list follows the view as well as the industry.
+  refillGenres();
   paintSummary();
   paint();
 
@@ -108,7 +111,43 @@ function fillFacet(select, entries, allLabel) {
   select.innerHTML = `<option value="">${esc(allLabel)}</option>`
     + entries.map(entry =>
       `<option value="${esc(entry.label)}">${esc(entry.label)} (${entry.count.toLocaleString()})</option>`).join("");
+  // Setting a value no option carries leaves the select on "", which is the
+  // right answer: the choice is gone, so the filter is gone with it.
   if (current) select.value = current;
+}
+
+// The genres actually used by the rows on screen, which is not the same as the
+// genres in the sheet.
+//
+// Standing in Bollywood and being offered Western, Bhangra and forty others is
+// a list of forty ways to empty the grid: only four of them are on a Bollywood
+// row. So the list is rebuilt from the rows that survive the industry and the
+// view, and the counts beside each one are the counts you will actually get.
+// The same narrowing the mark-watched dialog already does when you pick an
+// industry, applied to the control that filters.
+function genreOptions() {
+  const rows = state.view ? state.all.filter(item => item[state.view]) : state.all;
+  const scoped = state.category
+    ? rows.filter(item => item.category === state.category)
+    : rows;
+
+  const counts = {};
+  for (const item of scoped) {
+    for (const genre of item.genres || []) counts[genre] = (counts[genre] || 0) + 1;
+  }
+  return orderCategories(counts);
+}
+
+// Called whenever the industry changes. A genre that no longer exists under the
+// new industry is dropped rather than left selected: a filter naming something
+// the list no longer offers is a grid that is empty for no visible reason.
+function refillGenres() {
+  if (!dom.collGenre) return;
+  fillFacet(dom.collGenre, genreOptions(), "All genres");
+  if (state.genre && dom.collGenre.value !== state.genre) {
+    state.genre = "";
+    dom.collGenre.value = "";
+  }
 }
 
 function visible() {
@@ -256,7 +295,9 @@ function paintFrom(data) {
   state.all = data.items;
   state.stats = data.stats;
   fillFacet(dom.collCategory, data.categories || [], "All industries");
-  fillFacet(dom.collGenre, data.genres || [], "All genres");
+  // Not data.genres: that is every genre in the sheet. The list is scoped to
+  // the industry and the view currently chosen.
+  refillGenres();
   paintSummary();
   paint();
 }
@@ -317,6 +358,10 @@ function wire() {
     dom[id].addEventListener("change", () => {
       state[key] = dom[id].value;
       state.shown = PAGE_SIZE;
+      // Industry first, then genre - a sequence, not a pair. Picking one
+      // rebuilds the other, and the reverse would be a list that narrows
+      // itself into a corner.
+      if (key === "category") refillGenres();
       paint();
     });
   });

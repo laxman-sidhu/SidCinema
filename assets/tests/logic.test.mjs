@@ -4,6 +4,7 @@ import * as intent from "../../js/search/intent.js";
 import { rewriteForMedia } from "../../js/search/rewrite.js";
 import * as scope from "../../js/search/scope.js";
 import { buildSections } from "../../js/ui/sections.js";
+import * as filters from "../../js/search/filters.js";
 
 let pass = 0, fail = 0;
 const t = (name, fn) => { try { fn(); pass++; } catch (e) { fail++; console.log("FAIL " + name + ": " + e.message); } };
@@ -152,6 +153,29 @@ t("sections: upcoming splits out and related is last", () => {
   assert.deepEqual(s.map(x=>x.key), ["released","upcoming","related"]);
   assert.equal(s[2].title, "More like Out");
   assert.equal(s.reduce((n,x)=>n+x.movies.length,0), 3);
+});
+
+// The browse panel treated a sort as no filter at all, so "Biggest box office"
+// with nothing else picked fell through to the trending feed - which looked
+// exactly like the sort being ignored.
+t("a sort on its own is a real query, except the default one", () => {
+  assert.ok(filters.isActive({ sort: "revenue" }), "biggest box office answered with trending");
+  assert.ok(filters.isActive({ sort: "rating" }));
+  assert.ok(filters.isActive({ sort: "newest" }));
+  // popularity is what discover does when asked for nothing, so it is not a
+  // question - it IS the home feed.
+  assert.ok(!filters.isActive({ sort: "popularity" }));
+  assert.ok(!filters.isActive({}));
+  // And it still counts when it travels with something else.
+  assert.ok(filters.isActive({ language: "hi" }));
+  assert.ok(filters.isActive({ language: "hi", sort: "revenue" }));
+});
+
+t("a chip says what it means, not what the API calls it", () => {
+  assert.equal(filters.labelFor("sort", "revenue"), "Biggest box office");
+  assert.equal(filters.labelFor("sort", "rating"), "Highest rated");
+  assert.equal(filters.labelFor("rating", "7"), "7+");
+  assert.equal(filters.labelFor("genre", "Comedy"), "Comedy");
 });
 
 t("esc blocks injection", () => {
