@@ -75,6 +75,36 @@ t("every class the code emits has a rule", () => {
   assert.deepEqual(missing, [], "unstyled classes: " + missing.join(", "));
 });
 
+// The title sat on top of every poster in the grid. .card__noposter is
+// absolute and comes FIRST so the image can cover it - but a positioned element
+// paints above a non-positioned one whatever the source order says, so the
+// image has to be positioned too. The modal's fallbacks were always built this
+// way; the card was the one that was not.
+t("an image that covers a fallback is positioned itself", () => {
+  for (const [box, image] of [
+    [".card__noposter", ".card__poster img"],
+    [".detail__similar-alt", ".detail__similar-art img"],
+    [".detail__face-ini", ".detail__face img"]
+  ]) {
+    const behind = lastDeclaration(box);
+    const front = lastDeclaration(image);
+    assert.ok(behind && front, `${box} or ${image} has no rule`);
+    if (!/position:\s*(absolute|relative|fixed|sticky)/.test(behind)) continue;
+    assert.match(front, /position:\s*(absolute|relative|fixed|sticky)/,
+      `${behind === null ? box : image} would paint UNDER ${box}, showing the title over the artwork`);
+  }
+});
+
+// The phone dropdown is fixed and lives on <body> for one reason: an ancestor
+// with overflow would clip it to nothing, and .topbar__tools has exactly that.
+t("the nav dropdown cannot be clipped by the strip it sits in", () => {
+  const list = lastDeclaration(".navmenu__list");
+  assert.ok(list, ".navmenu__list has no rule at all");
+  assert.match(list, /position:\s*fixed/, "absolute inside .topbar__tools is clipped away");
+  const z = Number((list.match(/z-index:\s*(\d+)/) || [])[1]);
+  assert.ok(z > 60, "the topbar sits at 60, so a lower menu paints behind it");
+});
+
 t("braces balance and no at-rule is left open", () => {
   let depth = 0, i = 0;
   while (i < css.length) {
@@ -110,7 +140,8 @@ t("every typeable control is 16px on a phone", () => {
   const phone = phoneBlocks();
   assert.ok(phone.length > 0, "no phone block found - the selector may have changed");
 
-  for (const selector of ["gate__input", "gate__select", "facets__select", "collbar__search input"]) {
+  for (const selector of ["gate__input", "gate__select", "facets__select", "collbar__search input",
+    "scopepick__select", "sortfield select"]) {
     const re = new RegExp("[^{}]*" + selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
       + "[^{}]*\\{([^}]*)\\}", "g");
     let m;

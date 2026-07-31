@@ -7,9 +7,12 @@ import assert from "node:assert";
 let html = "";
 const host = { set innerHTML(v) { html = v; }, get innerHTML() { return html; } };
 
-globalThis.document = { getElementById: id => (id === "navTools" ? host : null) };
+globalThis.document = {
+  getElementById: id => (id === "navTools" ? host : null),
+  addEventListener: () => {}
+};
 globalThis.URL = URL;
-globalThis.window = { location: {} };
+globalThis.window = { location: {}, addEventListener: () => {} };
 
 const { paintNav } = await import("../../js/ui/nav.js");
 
@@ -20,7 +23,13 @@ function at(pathname, href, options) {
   globalThis.window.location = { pathname, href };
   paintNav(options);
   return {
-    labels: [...html.matchAll(/icon-btn__text">([^<]+)</g)].map(m => m[1]),
+    // The row of labelled links, which is what a wide screen shows.
+    labels: [...html.matchAll(/<a class="icon-btn icon-btn--label[^"]*"[^>]*>[\s\S]*?icon-btn__text">([^<]+)</g)]
+      .map(m => m[1]),
+    // The same destinations inside the phone dropdown.
+    menu: [...html.matchAll(/navmenu__item[^"]*"[^>]*>[\s\S]*?<span>([^<]+)<\/span>/g)].map(m => m[1]),
+    // What the dropdown button calls itself.
+    trigger: (html.match(/navmenu__trigger[\s\S]*?icon-btn__text">([^<]+)</) || [])[1],
     current: (html.match(/is-current"[^>]*href="([^"]+)"/) || [])[1],
     html
   };
@@ -51,7 +60,39 @@ t("the current page is marked, and only it", () => {
     "watched.html?view=favorite");
   assert.equal(at("/watched.html", "http://x/watched.html").current, "watched.html");
   assert.equal(at("/watchlist.html", "http://x/watchlist.html").current, "watchlist.html");
-  assert.equal((at("/watchlist.html", "http://x/watchlist.html").html.match(/is-current/g) || []).length, 1);
+  // Twice, and only twice: the row link and its twin in the dropdown. Both are
+  // in the DOM at every width and CSS shows one.
+  assert.equal((at("/watchlist.html", "http://x/watchlist.html").html.match(/is-current/g) || []).length, 2);
+});
+
+// On a phone the four destinations collapse into one control. Four unlabelled
+// glyphs in a row named nothing; this says where you are and lists where you
+// could go.
+t("the phone dropdown carries the same four destinations", () => {
+  for (const [path, href] of [
+    ["/index.html", "http://x/index.html"],
+    ["/watched.html", "http://x/watched.html"],
+    ["/watchlist.html", "http://x/watchlist.html"]
+  ]) {
+    assert.deepEqual(at(path, href).menu, DESTINATIONS, `wrong menu on ${href}`);
+  }
+});
+
+t("the dropdown button says which collection you are in", () => {
+  assert.equal(at("/watched.html", "http://x/watched.html").trigger, "Library");
+  assert.equal(at("/watched.html", "http://x/watched.html?view=favorite").trigger, "Favourites");
+  assert.equal(at("/watchlist.html", "http://x/watchlist.html").trigger, "Watchlist");
+  // The search page is in no collection, so the button names the set instead of
+  // claiming to be somewhere.
+  assert.equal(at("/index.html", "http://x/index.html").trigger, "Collections");
+});
+
+t("the tools sit after the destinations and browse sits last", () => {
+  const nav = at("/index.html", "http://x/index.html", { browse: true });
+  const order = ["navMenuBtn", "refreshBtn", "themeBtn", "filterToggle"]
+    .map(id => nav.html.indexOf(`id="${id}"`));
+  assert.deepEqual(order, [...order].sort((a, b) => a - b), "the navbar order changed");
+  assert.ok(order.every(at => at > -1));
 });
 
 t("the search page marks nothing, since it has no entry", () => {

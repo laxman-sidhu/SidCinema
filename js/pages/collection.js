@@ -12,7 +12,7 @@ import * as cardactions from "../ui/cardactions.js";
 import * as detail from "../ui/detail.js";
 import * as actions from "../ui/actions.js";
 import * as toast from "../ui/toast.js";
-import { paintNav, wireTheme } from "../ui/nav.js";
+import { paintNav, wireTheme, wireRefresh } from "../ui/nav.js";
 import { watched } from "../data/watched.js";
 import { watchlist } from "../data/watchlist.js";
 
@@ -332,6 +332,27 @@ function wire() {
     paintTitle();
     paintNav();
     wireTheme();
+  });
+
+  // This page had no reload at all: the button was in the navbar on every page
+  // but only the search page ever bound it, so here it was a control that
+  // answered a click with nothing.
+  wireRefresh(async () => {
+    const { invalidate } = await import("../data/sheets.js");
+    invalidate();
+
+    const ok = PAGE.views
+      ? await watched.load()
+      : (await Promise.all([watchlist.load(), watched.load()]))[0];
+    if (!ok) {
+      throw new Error((PAGE.views ? watched.lastError : watchlist.lastError)
+        || "Could not reload the sheet.");
+    }
+
+    paintFrom(currentData());
+
+    const count = (PAGE.views ? watched.stats().total_rows : watchlist.stats().total_rows);
+    return `Reloaded \u2014 ${count.toLocaleString()} ${PAGE.views ? "watched" : "queued"}`;
   });
 
   detail.attach(dom.collGrid);

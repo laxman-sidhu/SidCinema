@@ -59,6 +59,7 @@ Layout
 
     js/ui/
         nav.js                 the shared navbar, built from one list
+        portrait.js            the footer photograph
         cards.js               card markup
         cardactions.js         the three-dot menu on every card
         actions.js             the gate, the mark-watched dialog, write calls
@@ -71,7 +72,7 @@ Layout
         collection.js          BOTH watched.html and watchlist.html
 
     assets/apps_script/        Code.gs, the read and write bridge
-    assets/images/             the favicon, and nothing else
+    assets/images/             the favicon and the two portraits
     assets/docs/               this file and SETUP.txt
     assets/tests/              two dependency-free Node suites
 
@@ -277,10 +278,68 @@ and made the view look like it had not filtered anything. Each view names itself
 in its first tile and cross-references the other flag: Must watch shows how many
 of its titles are also favourites, and the reverse.
 
+The reload button reports three times over. It was bound on the search page
+only, so on the library and the watchlist it was a control that answered a click
+with nothing - and a control that answers with silence gets clicked again, which
+is how one intended reload became four. wireRefresh in js/ui/nav.js now owns it
+on every page: the icon spins while the read is in flight, settles to a tick for
+a moment afterwards, and the toast names what came back. It also refuses a
+second click while the first is running, so an impatient double tap cannot start
+two reads. Covered by a test.
+
+The four collections become one dropdown on a phone. Below 720px the labels
+were already dropping, leaving four unlabelled glyphs in a row that named
+nothing and left no margin for error on a 360px screen. They now collapse into a
+single control that says which collection you are in and opens a menu of the
+rest, with the reload and theme buttons and then browse to its right - the same
+order as the wide layout.
+
+That menu is position:fixed and lives on <body>, for the same reason the card
+menu does. Below 600px .topbar__tools carries overflow-x:auto as its own last
+resort, and an overflow container clips a dropdown inside it to nothing; .topbar
+also has backdrop-filter, which makes it the containing block for anything fixed
+inside it, so the menu has to leave the header entirely rather than merely be
+positioned against it. Both halves are asserted in css.test.mjs.
+
+A card's title paints BEHIND its poster, and the image has to be positioned for
+that to be true. .card__noposter is position:absolute and comes first in the
+markup so the image can cover it - but a positioned element paints above a
+non-positioned one whatever the source order says, so the title was printed over
+every poster in the grid. The modal's own fallbacks were always built this way;
+the card was the one place that was not. This is the same rule that once let
+.wash veil the library, and css.test.mjs now checks every fallback-behind-image
+pair rather than just this one.
+
+Light is a pastel scheme, not a white one. It was white cards on near-white
+paper: nothing had a surface of its own and every panel needed a shadow to prove
+it existed. The paper is now a warm lilac-tinted blush, cards sit a shade above
+it, ink is a deep plum rather than a slate, and each tint is the pastel of its
+own meaning rather than grey. Shadows are tinted with the paper's own plum,
+because a neutral grey shadow over a pastel surface greys the pastel out and the
+whole scheme looks dusty. Green still only means watched and gold only queued,
+so the pastels are lighter statements of what those already meant and no colour
+picks up a second job. (--glass in the light theme was defined as var(--glass),
+which is circular and resolves to nothing; the header had no tint at all in
+light mode until this.)
+
+Phone controls shrink by PADDING, never by font-size. Every one of them is a
+focusable form control and iOS zooms the whole page when one under 16px takes
+focus, and never zooms back out. The text stays at 16 and the box shrinks around
+it.
+
 Green means watched, and it has to mean it everywhere. The filled watched tick
 had no rule of its own, so it inherited the action row's muted grey - the one
 state the whole app exists to show was the only control that did not announce
 itself.
+
+"me" in the footer opens a photograph, and which one depends on the theme:
+colour for light, black and white for dark. Not a filter - two different
+photographs, each taken to sit in the scheme it appears in. WebP, ~28KB against
+~700KB for the JPEGs they came from, and neither is fetched until the word is
+clicked for the first time, so a portrait nobody opens costs nothing. It slides
+up from the bottom, which is the edge the trigger sits on. A MutationObserver
+watches data-theme rather than hooking the theme button, so the toggle keeps
+working with the sheet open and the theme button needs to know nothing about it.
 
 Cards do not print the original title. "Colony / 群体" on a card is two lines
 where one will do, and the second is not the line anyone is scanning for. The

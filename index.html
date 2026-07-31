@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>SidCinema</title>
   <meta name="description" content="Search movies and web series, and instantly see which ones I have already watched.">
-  <meta name="theme-color" content="#fafbfd" id="themeColor">
+  <meta name="theme-color" content="#faf6fb" id="themeColor">
 
   <script>
     // Runs before the stylesheet paints, so a dark session never flashes white.
@@ -191,7 +191,7 @@
   <footer class="footer">
     <div class="wrap footer__inner">
       <p class="footer__line">Thousands of Movies, one question: have I watched this one yet?</p>
-      <p class="footer__made">Made with <span class="footer__heart">&#128150;</span> by me</p>
+      <p class="footer__made">Made with <span class="footer__heart">&#128150;</span> by <button type="button" class="footer__me" data-portrait-open aria-haspopup="dialog">me</button></p>
     </div>
   </footer>
 
@@ -232,7 +232,9 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
   <script type="module">
     import { start } from "./js/pages/search.js";
+    import { wirePortrait } from "./js/ui/portrait.js";
     start();
+    wirePortrait();
   </script>
 </body>
 </html>

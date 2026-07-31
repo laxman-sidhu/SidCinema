@@ -12,7 +12,7 @@ import * as cardactions from "../ui/cardactions.js";
 import * as detail from "../ui/detail.js";
 import * as actions from "../ui/actions.js";
 import * as toast from "../ui/toast.js";
-import { paintNav, wireTheme } from "../ui/nav.js";
+import { paintNav, wireTheme, wireRefresh } from "../ui/nav.js";
 import { watched } from "../data/watched.js";
 import { watchlist } from "../data/watchlist.js";
 import { people } from "../data/people.js";
@@ -521,7 +521,7 @@ function wire() {
     if (event.key === "Escape" && panelIsOpen()) closePanel();
   });
 
-  dom.refreshBtn.addEventListener("click", () => reload());
+  wireRefresh(reload);
 
   detail.attach(dom.resultSections);
   cardactions.attach(dom.resultSections, itemForCard, {
@@ -532,18 +532,22 @@ function wire() {
   });
 }
 
+// Returns the line the toast settles to; throwing is how it reports a failure.
+// The spinner, the tick and the toast itself belong to wireRefresh, so every
+// page reports a reload the same way.
 async function reload() {
-  const note = toast.pending("Reloading your watch history\u2026");
   const { invalidate } = await import("../data/sheets.js");
   invalidate();
+
   const ok = await Promise.all([watched.load(), watchlist.load()]);
-  if (ok[0]) {
-    state.items = annotate(state.items);
-    paintResults();
-    note.succeed(`Reloaded \u2014 ${watched.stats().total_rows.toLocaleString()} watched`);
-  } else {
-    note.fail(watched.lastError || "Could not reload the sheet.");
-  }
+  if (!ok[0]) throw new Error(watched.lastError || "Could not reload the sheet.");
+
+  state.items = annotate(state.items);
+  paintResults();
+
+  const seen = watched.stats().total_rows.toLocaleString();
+  const queued = watchlist.stats().total_rows.toLocaleString();
+  return `Reloaded \u2014 ${seen} watched, ${queued} queued`;
 }
 
 // --- start ------------------------------------------------------------------

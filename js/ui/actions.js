@@ -4,6 +4,7 @@ import * as auth from "../data/auth.js";
 import * as writer from "../data/writer.js";
 import { watched } from "../data/watched.js";
 import { SERIES_INDUSTRY } from "../config.js";
+import { firstGenre } from "../tmdb/queries.js";
 import { esc } from "../core/util.js";
 import * as toast from "./toast.js";
 
@@ -421,7 +422,15 @@ export function setFlag(item, flag, value) {
     : { mustWatch: value });
 }
 
-export function addToWatchlist(item) {
+export async function addToWatchlist(item) {
+  // The Genre column is written on the way in or not at all: the watchlist page
+  // groups by it, and nothing later fills a blank one in. Cards from a list
+  // endpoint already carry their genres; the ones that do not cost one call
+  // here rather than a hand edit in the sheet afterwards.
+  const genre = (item.genres && item.genres[0])
+    || item.genre
+    || await firstGenre(item.id, item.media_type);
+
   return writer.addWatchlist(rowFor(item, {
     // A queued series has to say so. Industry is the only thing in the sheet
     // that records whether a row is a film or a series, and a TMDB result
@@ -429,7 +438,7 @@ export function addToWatchlist(item) {
     // land with a blank cell and read back as a film.
     industry: item.category
       || (item.media_type === "tv" ? SERIES_INDUSTRY : ""),
-    genre: (item.genres && item.genres[0]) || ""
+    genre
   }));
 }
 

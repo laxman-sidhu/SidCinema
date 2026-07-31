@@ -35,6 +35,7 @@ function boot(page) {
   Object.assign(globalThis, {
     window, document: window.document, localStorage: window.localStorage,
     sessionStorage: window.sessionStorage, CustomEvent: window.CustomEvent, URL,
+    MutationObserver: window.MutationObserver,
     requestAnimationFrame: fn => setTimeout(fn, 0), performance: { now: () => Date.now() }
   });
   return window;
@@ -284,6 +285,92 @@ await t("title matching still works for a row written in its own script", async 
     og_title: "\u0938\u092a\u0942\u0924", industry: "Bollywood", must_watch: false, favorite: false, media: "movie" }]);
   assert.ok(watched.annotate({ id: 999, title: "Sapoot", original_title: "\u0938\u092a\u0942\u0924" }).watched,
     "an old native-script row should still be recognised");
+});
+
+// The complaint this fixes: on the library and the watchlist the reload button
+// was never bound, so a click did nothing at all - and a control that answers
+// with silence gets clicked again and again.
+await t("the reload button reports, on a page that never had one wired", async () => {
+  const window = boot("watched.html");
+  seedSnapshot(window);
+  stubFetch({ readDelay: 60 });
+
+  const { start } = await import(`${ROOT}/js/pages/collection.js?9`);
+  await start();
+
+  const button = window.document.getElementById("refreshBtn");
+  assert.ok(button, "no reload button in the navbar");
+
+  button.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await wait(10);
+
+  // While it runs: the icon spins and the toast names the job.
+  assert.ok(button.classList.contains("is-busy"), "nothing on the button said it was working");
+  const toast = window.document.querySelector(".toast");
+  assert.ok(toast && /Reloading/i.test(toast.textContent), "no toast while the read was in flight");
+
+  await wait(300);
+
+  // After: the button settles to a tick and the toast says what came back.
+  assert.ok(!button.classList.contains("is-busy"));
+  assert.ok(button.classList.contains("is-done"), "the button gave no confirmation of its own");
+  assert.match(window.document.querySelector(".toast").textContent, /Reloaded/,
+    "the toast never settled to a result");
+});
+
+// Two reads where one was meant is exactly what an unresponsive button causes.
+await t("a second click while it is still reading is ignored", async () => {
+  const window = boot("watchlist.html");
+  const writes = stubFetch({ readDelay: 200 });
+  let reads = 0;
+  const inner = globalThis.fetch;
+  globalThis.fetch = async (u, o) => {
+    if (String(u).includes("action=read")) reads++;
+    return inner(u, o);
+  };
+
+  const { start } = await import(`${ROOT}/js/pages/collection.js?10`);
+  await start();
+  const before = reads;
+
+  const button = window.document.getElementById("refreshBtn");
+  button.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  button.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  button.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await wait(400);
+
+  assert.equal(reads - before, 1, "an impatient triple tap started three reads");
+});
+
+// "me" in the footer, and the photograph that belongs to the theme it opens in.
+await t("the footer portrait opens, swaps with the theme, and closes", async () => {
+  const window = boot("index.html");
+  window.document.documentElement.dataset.theme = "light";
+
+  const { wirePortrait } = await import(`${ROOT}/js/ui/portrait.js?1`);
+  wirePortrait();
+
+  const trigger = window.document.querySelector("[data-portrait-open]");
+  assert.ok(trigger, "the footer credit has no trigger");
+  assert.ok(!window.document.querySelector(".portrait"), "the sheet should not exist until it is asked for");
+
+  trigger.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await wait(30);
+
+  const sheet = window.document.querySelector(".portrait");
+  assert.ok(sheet && !sheet.hidden, "the portrait did not open");
+  assert.match(sheet.querySelector(".portrait__img").getAttribute("src"), /me-light\.webp$/,
+    "the light theme should get the colour photograph");
+
+  // The theme button is elsewhere and knows nothing about this sheet.
+  window.document.documentElement.dataset.theme = "dark";
+  await wait(30);
+  assert.match(sheet.querySelector(".portrait__img").getAttribute("src"), /me-dark\.webp$/,
+    "the photograph did not follow the theme");
+
+  sheet.querySelector(".portrait__close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await wait(400);
+  assert.ok(sheet.hidden, "the portrait did not close");
 });
 
 console.log(`\n${pass} passed, ${fail} failed`);

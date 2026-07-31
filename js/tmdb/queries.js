@@ -156,6 +156,25 @@ export async function titleSearch(query, media = MOVIE, { withRelated = true } =
   return { seed, items: [...matches, ...related] };
 }
 
+/**
+ * The first genre TMDB gives this title, for a card that arrived without any.
+ *
+ * A list endpoint returns genre_ids and the client maps them, but a credit list
+ * or a stripped-down feed sometimes carries neither - and the Genre column in
+ * the sheet is typed into by hand and grouped by, so an empty one is a row that
+ * quietly drops out of every genre filter later.
+ */
+export async function firstGenre(itemId, media = MOVIE) {
+  if (!itemId) return "";
+  try {
+    const payload = await tmdb.get(`/${tmdb.cleanMedia(media)}/${itemId}`, { language: "en-US" });
+    const first = (payload.genres || [])[0];
+    return first && first.name ? String(first.name) : "";
+  } catch {
+    return "";
+  }
+}
+
 // --- people -----------------------------------------------------------------
 
 function asPerson(raw, fallbackName = "") {

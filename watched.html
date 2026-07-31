@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>My library &middot; SidCinema</title>
   <meta name="description" content="Everything I have watched, with Favourites and Must watch.">
-  <meta name="theme-color" content="#fafbfd" id="themeColor">
+  <meta name="theme-color" content="#faf6fb" id="themeColor">
 
   <script>
     (function () {
@@ -118,6 +118,7 @@
   <footer class="footer">
     <div class="wrap footer__inner">
       <p class="footer__line">Every title, one place.</p>
+      <p class="footer__made">Made with <span class="footer__heart">&#128150;</span> by <button type="button" class="footer__me" data-portrait-open aria-haspopup="dialog">me</button></p>
     </div>
   </footer>
 
@@ -148,7 +149,9 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
   <script type="module">
     import { start } from "./js/pages/collection.js";
+    import { wirePortrait } from "./js/ui/portrait.js";
     start();
+    wirePortrait();
   </script>
 </body>
 </html>

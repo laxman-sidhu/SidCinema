@@ -12,48 +12,60 @@
 [hidden] { display: none !important; }
 
 /* --- tokens: light --- */
+/* A pastel scheme, not a white one. The page was white card on near-white
+   paper, which reads as a blank document with things on it: nothing had a
+   surface of its own and every panel needed a shadow to prove it existed.
+   These are the same hues, held at low saturation and high lightness, so the
+   paper is a warm lilac-tinted blush, cards sit a shade above it in near-white
+   with a hint of the same warmth, and every tint is the pastel of its own
+   meaning rather than grey.
+   Green still only means watched, gold only queued or rated, raspberry only
+   interaction - the pastels are lighter statements of exactly those, so no
+   colour picks up a second job. */
 :root {
-  --paper:      #fafbfd;
-  --card:       #ffffff;
-  --tint:       #f2f5fa;
-  --tint-2:     #e9eef6;
-  --line:       #e2e8f1;
-  --line-soft:  #eff3f8;
+  --paper:      #faf6fb;
+  --card:       #fffdff;
+  --tint:       #f6eff8;
+  --tint-2:     #efe6f3;
+  --line:       #ead9ea;
+  --line-soft:  #f4eaf5;
 
-  --ink:        #16202e;
-  --ink-soft:   #526072;
-  --muted:      #8a94a4;
+  /* Ink is a deep plum rather than a slate, so the text belongs to the same
+     family as the paper instead of sitting on it. Still 12:1 on --card. */
+  --ink:        #2b1f33;
+  --ink-soft:   #5f5170;
+  --muted:      #948aa0;
 
-  --seen:       #0e9f6e;
-  --seen-deep:  #06805a;
-  --seen-tint:  #e4f7ef;
-  --seen-wash:  #f1fbf7;
+  --seen:       #3aa981;
+  --seen-deep:  #1f8262;
+  --seen-tint:  #e2f5ec;
+  --seen-wash:  #eefaf4;
 
-  --gold:       #b57a12;
-  --gold-tint:  #fdf3e0;
-  --gold-line:  #f0d9a8;
-  --gold-ink:   #7a5308;
+  --gold:       #c08a2e;
+  --gold-tint:  #fdf1dd;
+  --gold-line:  #f2dcb0;
+  --gold-ink:   #8a6114;
 
-  --accent:     #e0457b;
-  --accent-deep:#c42e63;
-  --accent-tint:#fdedf3;
+  --accent:     #e0699b;
+  --accent-deep:#c44b7f;
+  --accent-tint:#fdeaf2;
 
-  --danger:     #e5484d;
+  --danger:     #e0616a;
 
   /* Bare channels, for rgba() with a variable alpha. */
-  --seen-rgb:   14, 159, 110;
-  --accent-rgb: 224, 69, 123;
-  --shade-rgb:  22, 32, 46;
+  --seen-rgb:   58, 169, 129;
+  --accent-rgb: 224, 105, 155;
+  --shade-rgb:  63, 42, 74;
 
   /* Surfaces that are not simply --card. */
-  --wash-top:   #ffffff;
-  --glass:      var(--glass);
-  --shimmer:    #ffffff;
-  --on-ink:     #ffffff;
+  --wash-top:   #fdf7fb;
+  --glass:      rgba(255, 251, 254, 0.82);
+  --shimmer:    #fdf6fb;
+  --on-ink:     #fffdff;
   --on-accent:  #ffffff;
   --on-seen:    #ffffff;
-  --seen-bar:   #46c79a;
-  --fade-rgb:   255, 255, 255;
+  --seen-bar:   #79cfae;
+  --fade-rgb:   255, 253, 255;
 
   --radius-sm:  12px;
   --radius:     18px;
@@ -61,9 +73,12 @@
 
   --search-max: 720px;
 
-  --shadow-sm:  0 1px 2px rgba(var(--shade-rgb), 0.05), 0 2px 6px rgba(var(--shade-rgb), 0.04);
-  --shadow:     0 2px 5px rgba(var(--shade-rgb), 0.05), 0 10px 24px -10px rgba(var(--shade-rgb), 0.14);
-  --shadow-lg:  0 4px 10px rgba(var(--shade-rgb), 0.06), 0 22px 44px -16px rgba(var(--shade-rgb), 0.2);
+  /* Tinted with the paper's own plum rather than black. A neutral grey shadow
+     over a pastel surface greys the pastel out and the whole scheme looks
+     dusty. */
+  --shadow-sm:  0 1px 2px rgba(var(--shade-rgb), 0.045), 0 2px 8px rgba(var(--shade-rgb), 0.05);
+  --shadow:     0 2px 6px rgba(var(--shade-rgb), 0.05), 0 12px 28px -12px rgba(var(--shade-rgb), 0.16);
+  --shadow-lg:  0 4px 12px rgba(var(--shade-rgb), 0.07), 0 26px 50px -18px rgba(var(--shade-rgb), 0.22);
 
   --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --font-body:    "Manrope", -apple-system, "Segoe UI", system-ui, sans-serif;
@@ -1122,6 +1137,16 @@ body.is-suggesting .suggestions {
   background: var(--tint);
 }
 .card__poster img {
+  /* POSITIONED, and that is the whole fix.
+     .card__noposter is position:absolute and comes first in the markup so the
+     image can cover it. But a positioned element paints above a NON-positioned
+     one whatever the DOM order says, so the title was painting on top of every
+     poster in the grid - the same rule that once let .wash veil the library.
+     Once the image is positioned too, source order decides and it wins. The
+     modal's own fallbacks were already built this way; the card was the one
+     place that was not. */
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -3949,4 +3974,244 @@ body { overflow-x: clip; }
 .detail__seen--listed svg {
   fill: currentColor;
   stroke: none;
+}
+
+/* --- the collections dropdown ---------------------------------------------
+   On a phone the four destinations become one control. Four unlabelled glyphs
+   in a row named nothing, and the label-drop breakpoint is exactly where they
+   stopped naming anything - so that is where the dropdown takes over.
+
+   The list is position:fixed and lives on <body>, placed by js/ui/nav.js from
+   the trigger's own box. It cannot be absolute inside the header: below 600px
+   .topbar__tools carries overflow-x:auto as its last-resort scroller and would
+   clip it away, and .topbar has backdrop-filter, which makes it the containing
+   block for anything fixed inside it. */
+.navmenu { position: relative; display: none; }
+
+.navmenu__caret {
+  width: 13px !important;
+  height: 13px !important;
+  margin-left: -2px;
+  opacity: 0.75;
+  transition: transform 0.2s var(--ease);
+}
+.navmenu__trigger[aria-expanded="true"] .navmenu__caret { transform: rotate(180deg); }
+.navmenu__trigger[aria-expanded="true"] {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--accent-deep);
+}
+
+.navmenu__list {
+  position: fixed;
+  /* Above .topbar, which sits at 60. */
+  z-index: 80;
+  min-width: 210px;
+  padding: 7px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--card);
+  box-shadow: var(--shadow-lg);
+  animation: navmenu-in 0.16s var(--ease);
+}
+
+@keyframes navmenu-in {
+  from { opacity: 0; transform: translateY(-7px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.navmenu__item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+.navmenu__item svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.navmenu__item:hover { background: var(--tint); color: var(--ink); }
+.navmenu__item.is-current {
+  background: var(--accent-tint);
+  color: var(--accent-deep);
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  /* The row of four goes; the one control that replaces them arrives. Both are
+     always in the DOM - swapping them with a resize listener would mean
+     re-binding on every breakpoint crossing for a few hundred bytes of markup. */
+  .topbar__tools > .icon-btn--label { display: none; }
+  .navmenu { display: block; }
+
+  /* The label stays on THIS one, because naming where you are is the entire
+     reason the dropdown exists. */
+  .navmenu .icon-btn--label { width: auto; padding: 0 9px 0 11px; gap: 7px; }
+  .navmenu .icon-btn--label .icon-btn__text { display: inline; font-size: 12.5px; }
+}
+
+/* --- the reload button answers for itself ---------------------------------
+   It was wired on one page of three, so on the other two a click did nothing
+   at all - and a control that answers with silence gets clicked again. Now the
+   arrows spin while the read is in flight and settle to a tick afterwards,
+   with the toast carrying the count. */
+.icon-btn__arrows,
+.icon-btn__done {
+  grid-area: 1 / 1;
+  transition: opacity 0.18s, transform 0.3s var(--ease);
+}
+.icon-btn__done { opacity: 0; transform: scale(0.5); }
+.icon-btn--refresh.is-done { color: var(--seen); border-color: var(--seen); }
+.icon-btn--refresh.is-done .icon-btn__arrows { opacity: 0; transform: scale(0.5); }
+.icon-btn--refresh.is-done .icon-btn__done { opacity: 1; transform: none; }
+/* Only the arrows spin. The tick is not a progress indicator. */
+.icon-btn--refresh.is-busy .icon-btn__done { animation: none; }
+
+/* The pip means "something you did has not been re-read yet", so it is absent
+   by default rather than a permanent green dot on the button. A reload is
+   exactly the thing that answers it. */
+.icon-btn__dot { display: none; }
+.icon-btn__dot.is-on { display: block; }
+
+/* --- phone: the controls above the grid -----------------------------------
+   Smaller by PADDING, never by font-size. Every one of these is a focusable
+   form control, and iOS zooms the whole page when one under 16px takes focus
+   and never zooms back out - so the text stays at 16 and the box shrinks
+   around it. */
+@media (max-width: 600px) {
+  .scopepick__label { font-size: 9px; letter-spacing: 0.1em; }
+  .scopepick__select { padding: 8px 26px 8px 13px; }
+  .scopepick__caret { right: 11px; }
+
+  .segmented__btn { padding: 7px 5px; font-size: 11.5px; }
+  .sortfield select { padding: 8px 25px 8px 11px; }
+}
+
+/* --- the portrait ---------------------------------------------------------
+   "me" in the footer is a button, and it looks like the word it replaced with
+   an underline under it - a link's affordance, not a button's box. */
+.footer__me {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: var(--accent-deep);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(var(--accent-rgb), 0.45);
+  text-underline-offset: 3px;
+  transition: color 0.2s, text-decoration-color 0.2s;
+}
+.footer__me:hover { color: var(--accent); text-decoration-color: var(--accent); }
+.footer__me:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+.portrait {
+  position: fixed;
+  inset: 0;
+  /* Over the topbar at 60 and the nav dropdown at 80. */
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.portrait__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--shade-rgb), 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.3s var(--ease);
+}
+.portrait.is-open .portrait__backdrop { opacity: 1; }
+
+/* Up from the bottom, which is where the trigger is - the panel arrives from
+   the direction the click came from rather than dropping in from nowhere. */
+.portrait__panel {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  width: min(440px, 100%);
+  padding: 12px 12px 4px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--card);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(28px) scale(0.97);
+  opacity: 0;
+  transition: transform 0.42s var(--ease), opacity 0.28s var(--ease);
+}
+.portrait.is-open .portrait__panel { transform: none; opacity: 1; }
+
+.portrait__frame {
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--tint);
+  aspect-ratio: 1 / 1;
+}
+.portrait__img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.portrait__cap {
+  padding: 12px 6px 12px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+/* On the panel and above the photograph's corner, not inside the image: the
+   same reason the trailer's close button sits on its own bar. */
+.portrait__close {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.2s var(--ease), color 0.2s, border-color 0.2s;
+}
+.portrait__close svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+}
+.portrait__close:hover { color: var(--accent-deep); border-color: var(--accent); transform: rotate(90deg); }
+
+body.portrait-open { overflow: hidden; }
+
+@media (max-width: 600px) {
+  .portrait { padding: 16px; }
+  .portrait__panel { width: 100%; }
+  .portrait__close { top: -10px; right: -6px; }
+}
+
+/* A slide is decoration. Anyone who has asked not to see one still gets the
+   photograph, it simply appears. */
+@media (prefers-reduced-motion: reduce) {
+  .portrait__panel { transition: opacity 0.2s; transform: none; }
+  .navmenu__list { animation: none; }
 }

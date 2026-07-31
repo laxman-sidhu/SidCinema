@@ -12,7 +12,11 @@
 let host = null;
 
 function mount() {
-  if (host) return host;
+  // Rebuilt when the cached host is no longer part of the document it is meant
+  // to be in. A strip appended to a page that has since been replaced swallows
+  // every toast silently, which is the one failure mode feedback code must not
+  // have.
+  if (host && host.isConnected && host.ownerDocument === document) return host;
   host = document.createElement("div");
   host.className = "toasts";
   host.setAttribute("role", "status");
