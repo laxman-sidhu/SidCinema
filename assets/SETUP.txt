@@ -1,16 +1,15 @@
 SidCinema - setup
 =================
 
-Five things to do. Steps 1 to 3 are required; 4 and 5 are the deploy.
+Five steps. 1 to 3 are required; 4 and 5 are the deploy.
 
-Nothing here needs Python, pip, a build step, or a server. The site is plain
-HTML, CSS and JavaScript, so any static host will run it.
+Nothing here needs Python, pip, a build step or a server. The site is plain HTML, CSS and JavaScript, so any static host will run it.
 
 
 1. The spreadsheet
 ------------------
 
-One workbook, three tabs. Tab names must match what Code.gs expects:
+One workbook, three tabs. Tab names must match what Code.gs expects.
 
     All Watched    Name | Year | Genre | Poster Link | Tmdb Id |
                    Original Title | Industry | (unnamed spacer) |
@@ -20,24 +19,17 @@ One workbook, three tabs. Tab names must match what Code.gs expects:
 
     People         Name | Role | Industry | TMDB_ID | TMDB_Status
 
-Row 1 must be the header row. Columns are matched by header NAME, not position,
-so you can reorder them freely and the unnamed spacer is ignored. Renaming a
-header is the only thing that breaks a column, and it fails loudly rather than
-writing to the wrong place.
+Row 1 must be the header row. Columns are matched by header NAME, not position, so you can reorder them freely and the unnamed spacer is ignored. Renaming a header is the only thing that breaks a column, and it fails loudly rather than writing to the wrong place.
 
-The Industry column does two jobs: it decides the media type (Web Series means
-series, everything else means film) and it is the category the library groups
-by. Nothing is hardcoded, so whatever the column says is what gets counted.
+The Industry column does two jobs: it decides the media type (Web Series means series, everything else means film) and it is the category the library groups by. Nothing is hardcoded, so whatever the column says is what gets counted.
 
-The People tab is optional. Without it you lose name autocomplete and the free
-spelling correction; everything else works.
+The People tab is optional. Without it you lose name autocomplete and the free spelling correction; everything else works.
 
 
 2. Deploy the Apps Script bridge
 --------------------------------
 
-This is the only part that touches Google, and it is where the read and the
-write both happen.
+This is the only part that touches Google, and it is where the read and the write both happen.
 
     a. Open the workbook, then Extensions > Apps Script.
     b. Delete whatever is in Code.gs and paste in assets/apps_script/Code.gs.
@@ -52,29 +44,17 @@ write both happen.
          Who has access:    Anyone
        Press Deploy and copy the /exec URL.
 
-"Anyone" is required. The site has no server, so the request comes straight from
-a visitor's browser and Google has nobody to authenticate. SECRET is what stands
-in for that.
+"Anyone" is required. The site has no server, so the request comes straight from a visitor's browser and Google has nobody to authenticate. SECRET is what stands in for that.
 
-Updating an already-deployed bridge is step f only, and it is NOT "New
-deployment": Deploy > Manage deployments > pencil > New version > Deploy. Saving
-Code.gs changes nothing the site can see, and a new deployment gives a new URL
-that breaks APPS_SCRIPT_URL.
+Updating a bridge that is already deployed is step f only, and it is NOT "New deployment": Deploy > Manage deployments > pencil > New version > Deploy. Saving Code.gs changes nothing the site can see, and a new deployment gives a new URL that breaks APPS_SCRIPT_URL.
 
-There is one more function worth knowing about in there. cleanWatchlist(), run
-the same way as testSetup, tidies the Watchlist tab: it removes a second row for
-a film already queued and any row for something already in All Watched, keeping
-the first row of each title. It logs what it removed and changes nothing else.
-Only needed once, for duplicates that predate the identity check - the bridge
-refuses to create new ones. File > Version history undoes it if it takes
-something wanted.
+One more function is worth knowing about. cleanWatchlist(), run the same way as testSetup, tidies the Watchlist tab: it removes a second row for a film already queued and any row for something already in All Watched, keeping the first row of each title. It logs what it removed and changes nothing else. Only needed once, for duplicates that predate the identity check, since the bridge refuses to create new ones. File > Version history undoes it if it takes something wanted.
 
 
 3. Fill in js/config.js
 -----------------------
 
-Everything you rotate lives in this one file. Nothing else in the app holds a
-key.
+Everything you rotate lives in this one file. Nothing else in the app holds a key.
 
     TMDB_API_KEY        themoviedb.org/settings/api - a v3 key or a v4 eyJ token
     GEMINI_API_KEY      aistudio.google.com/apikey - optional, see below
@@ -84,53 +64,49 @@ key.
     OWNER_PASSWORD      typed once per device to unlock the write buttons
     OWNER_NAME          shown in the "whose list is this?" notice
 
-Gemini is optional. Without a key, search still works: Title and Person never
-used it, and Auto and Genre & mood fall back to the offline parser. What you
-lose is the harder phrasings, like "best romantic films of bollywood" or
-"something mind bending from the 90s".
+Gemini is optional. Without a key, search still works: Title and Person never used it, and Auto and Genre & mood fall back to the offline parser. What you lose is the harder phrasings, like "best romantic films of bollywood" or "something mind bending from the 90s".
 
 
 4. Try it locally
 -----------------
 
-The pages use ES modules, which browsers refuse to load over file:// - so
-double-clicking index.html will not work. Serve the folder instead:
+The pages use ES modules, which browsers refuse to load over file://, so double-clicking index.html will not work. Serve the folder instead:
 
     python3 -m http.server 8000
 
 Then open http://localhost:8000. Any static server does the same job.
 
-Before you deploy, it is worth running the two test suites. They need nothing
-installed:
+Before deploying, run the tests. Seven of the nine need nothing installed:
 
     node assets/tests/logic.test.mjs
     node assets/tests/data.test.mjs
+    node assets/tests/watchlist.test.mjs
+    node assets/tests/people.test.mjs
+    node assets/tests/nav.test.mjs
+    node assets/tests/cardbar.test.mjs
+    node assets/tests/css.test.mjs
 
-They stub the network, so they check the real logic without touching your sheet.
+They stub the network, so they check the real logic without touching your sheet. flow.test.mjs and modal.test.mjs boot a real page in a real DOM and need jsdom (npm install jsdom); both skip cleanly without it.
 
 
 5. Put it on GitHub Pages
 -------------------------
 
-    a. Push the whole folder to a repository, with index.html at the root.
-       The root should hold exactly four things: the three .html pages, css/,
-       js/ and assets/.
+    a. Push the whole folder to a repository, with index.html at the root. The
+       root should hold exactly four things: the three .html pages, css/, js/
+       and assets/.
     b. Settings > Pages > Source: "Deploy from a branch", branch main, folder /.
     c. Wait a minute, then open the URL Pages gives you.
 
-That is the entire deploy. There is no build step, so what you push is what
-runs. A change is live as soon as Pages finishes.
+That is the entire deploy. There is no build step, so what you push is what runs, and a change is live as soon as Pages finishes.
 
-If the site loads but shows no data, the Apps Script deployment is the first
-thing to check - see the last section.
+If the site loads but shows no data, the Apps Script deployment is the first thing to check - see section 7.
 
 
 6. About the keys
 -----------------
 
-Everything in js/config.js is readable by anyone who views source. That was a
-deliberate choice for a personal project, but it is worth knowing exactly what
-each one exposes:
+Everything in js/config.js is readable by anyone who views source. That was a deliberate choice for a personal project, but it is worth knowing exactly what each one exposes.
 
     TMDB_API_KEY        Free and read-only. Worst case someone uses your quota.
     GEMINI_API_KEY      Billable. Worst case someone spends your free tier.
@@ -141,30 +117,18 @@ each one exposes:
                         the sheet. It stops an accidental click and a casual
                         visitor, nothing more.
 
-Two things worth doing anyway:
+Two things worth doing anyway. Set OWNER_PASSWORD to something you do not use elsewhere - not for the film diary's sake, just so a reused password is not sitting in a public repo. And know that Google Sheets keeps full version history: if anything ever does get damaged, File > Version history restores the workbook to any earlier point. That is the real backstop.
 
-    Set OWNER_PASSWORD to something you do not use elsewhere. Not for the film
-    diary's sake - just so a reused password is not sitting in a public repo.
-
-    Know that Google Sheets keeps full version history. If anything ever does
-    get damaged, File > Version history restores the workbook to any earlier
-    point. That is the real backstop.
-
-If you ever want the password to be a real boundary, the change is small and
-lives entirely in Code.gs: move the password into Script Properties, have doPost
-compare it and return an HMAC-signed token with an expiry
-(Utilities.computeHmacSha256Signature), and have the client send that token on
-writes instead of SECRET. About thirty lines. The site would then hold no secret
-at all beyond the TMDB key.
+If you ever want the password to be a real boundary, the change is small and lives entirely in Code.gs: move the password into Script Properties, have doPost compare it and return an HMAC-signed token with an expiry (Utilities.computeHmacSha256Signature), and have the client send that token on writes instead of SECRET. About thirty lines. The site would then hold no secret at all beyond the TMDB key.
 
 
 7. Troubleshooting
 ------------------
 
 Nothing loads, and the console says CORS.
-    The Apps Script deployment is not set to "Anyone", or the URL in
-    APPS_SCRIPT_URL is wrong. Open the /exec URL directly in a browser: it
-    should answer with JSON, not a Google sign-in page.
+    The Apps Script deployment is not set to "Anyone", or APPS_SCRIPT_URL is
+    wrong. Open the /exec URL directly in a browser: it should answer with
+    JSON, not a Google sign-in page.
 
 Reads work, writes fail with "Bad token".
     SECRET in Code.gs and APPS_SCRIPT_TOKEN in js/config.js are not identical.
@@ -172,8 +136,8 @@ Reads work, writes fail with "Bad token".
 
 An edit to Code.gs changed nothing.
     Apps Script serves the last DEPLOYED version, not the last saved one.
-    Deploy > Manage deployments > pencil > New version > Deploy. Do NOT create a
-    new deployment - that gives a new URL and breaks APPS_SCRIPT_URL.
+    Deploy > Manage deployments > pencil > New version > Deploy. Do NOT create
+    a new deployment - that gives a new URL and breaks APPS_SCRIPT_URL.
 
 Search says the TMDB key is missing.
     TMDB_API_KEY is empty in js/config.js, or the key was revoked. A v4 token
@@ -190,13 +154,13 @@ The write buttons do nothing.
     either missing the site runs read-only on purpose.
 
 Something on the watchlist has two rows, or shows no watchlist tag in search.
-    The bridge is running an older version of Code.gs. The check that refuses a
-    duplicate lives there as well as in the browser, and only the browser half
-    ships with the site - redeploy as above, then run cleanWatchlist() once to
-    clear what is already in the sheet.
+    The bridge is running an older Code.gs. The check that refuses a duplicate
+    lives there as well as in the browser, and only the browser half ships with
+    the site - redeploy as above, then run cleanWatchlist() once to clear what
+    is already in the sheet.
 
 A queued series is counted as a film.
-    Its Industry cell is blank. Rows added before this was fixed have one;
-    typing "Web Series" into that cell is the whole repair, and matching treats
-    a blank cell as unknown rather than guessing, so nothing else breaks in the
+    Its Industry cell is blank. Rows added before this was fixed have one, and
+    typing "Web Series" into that cell is the whole repair. Matching treats a
+    blank cell as unknown rather than guessing, so nothing else breaks in the
     meantime.
