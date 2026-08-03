@@ -30,6 +30,11 @@ tests cover the cases that actually matter and cost nothing to run:
   - Google first, memory second: a failed write leaves memory untouched
   - marking watched taking exactly ONE Apps Script call
   - Must Watch and Favorites not disturbing each other
+  - a renamed header reading identically: Watchlist's title column was "Movie"
+    and is now "Name", and both are aliases of the same field
+  - a field named by two columns resolving to the FIRST of them, which is the
+    column Code.gs picks. A half-done rename is how a tab ends up with two
+    title columns, and the two sides used to disagree about which one won
 
 watchlist.test.mjs runs on a slice of the REAL sheet rather than tidy fixtures,
 because the bug it guards does not appear in tidy fixtures. It carries the two

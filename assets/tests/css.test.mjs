@@ -208,5 +208,40 @@ t("the navbar fits the narrowest phone", () => {
     "clip, not hidden - hidden on body stops the sticky topbar sticking");
 });
 
+// The cast grid drew a different-sized circle in every column on a phone, and
+// clipped the longest names off the right edge of the modal. `1fr` is
+// `minmax(auto, 1fr)`, and that auto minimum is the item's MIN-CONTENT width -
+// the longest unbreakable word in it. Cast lists are full of them
+// ("Brahmanandam", "Balasubramanian"), so any track holding one was floored at
+// the width of that word, the rest shared what was left, and the faces - sized
+// at width:100% of their track on a phone - inherited the unevenness.
+//
+// Nothing in a rendered DOM would catch this either: jsdom has no layout
+// engine, so the grid resolves correctly in modal.test.mjs and wrongly on a
+// phone. It has to be asserted against the stylesheet text.
+t("no fixed-count grid of text uses a track with an auto minimum", () => {
+  for (const selector of [".detail__people", ".detail__similars"]) {
+    const re = new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      + "[^{}]*\\{([^}]*)\\}", "g");
+    let m;
+    while ((m = re.exec(bare))) {
+      const tracks = (m[1].match(/grid-template-columns:\s*([^;]+)/) || [])[1];
+      if (!tracks) continue;
+      assert.ok(!/repeat\(\s*\d+\s*,\s*1fr\s*\)/.test(tracks),
+        `${selector} uses repeat(N, 1fr); the auto minimum is min-content, so one `
+        + "long name widens its track and starves the others - use minmax(0, 1fr)");
+    }
+  }
+});
+
+t("cast names may break, or a word wider than its track paints over its neighbour", () => {
+  for (const selector of [".detail__person-name", ".detail__person-role"]) {
+    const body = lastDeclaration(selector);
+    assert.ok(body, `${selector} has no rule at all`);
+    assert.match(body, /overflow-wrap:\s*anywhere/,
+      `${selector} cannot break, and minmax(0, 1fr) no longer widens the track for it`);
+  }
+});
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

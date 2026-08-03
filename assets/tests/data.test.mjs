@@ -222,5 +222,56 @@ await t("an unknown industry scopes to nothing, so the caller can fall back", as
   assert.deepEqual(watched.genres("Nollywood"), []);
 });
 
+// --- the header row is allowed to be renamed --------------------------------
+// The Watchlist tab's title column was "Movie" and is now "Name". Columns are
+// found by header name, so a rename is a real change to the read path and not
+// a cosmetic one. These pin both spellings to the same result, and pin the
+// half-done rename - both columns present - to the same column Code.gs picks.
+const sheets = await import("../../js/data/sheets.js");
+const ORIGINAL_HEADER = TABS.watchlist.header.slice();
+const ORIGINAL_ROWS = TABS.watchlist.rows.map(r => r.slice());
+
+async function readWatchlistWith(header, rows) {
+  TABS.watchlist.header = header;
+  TABS.watchlist.rows = rows;
+  sheets.invalidate();
+  return await sheets.fetchTab("watchlist");
+}
+
+await t("the Watchlist reads the same under \"Movie\" and under \"Name\"", async () => {
+  const row = ["Dune", "2021", "Sci-Fi", "p5", "438631", "Dune", "Hollywood"];
+  const rest = ORIGINAL_HEADER.slice(1);
+  const asMovie = await readWatchlistWith(["Movie", ...rest], [row.slice()]);
+  const asName = await readWatchlistWith(["Name", ...rest], [row.slice()]);
+  assert.equal(asName[0].name, "Dune");
+  assert.deepEqual(asMovie, asName, "the rename changed what the site reads");
+});
+
+await t("two columns naming one field: the first wins, as Code.gs does", async () => {
+  // A rename with the old column left behind. Code.gs's columnMap() keeps the
+  // first match; the site kept the last, so it read the title out of a
+  // different cell than the bridge wrote to, silently.
+  const rows = await readWatchlistWith(
+    ["Name", "Year", "Genre", "Poster Link", "Tmdb Id", "Original Title", "Industry", "Movie"],
+    [["Dune", "2021", "Sci-Fi", "p5", "438631", "Dune", "Hollywood", "STALE OLD TITLE"]]
+  );
+  assert.equal(rows[0].name, "Dune");
+});
+
+await t("one column still feeds one field", async () => {
+  // "Title" is an alias of name and of nothing else, but the guard that stops a
+  // single column being claimed twice has to survive the fix to the other one.
+  const rows = await readWatchlistWith(
+    ["Title", "Year", "Genre", "Poster Link", "Tmdb Id", "Original Title", "Industry"],
+    [["Dune", "2021", "Sci-Fi", "p5", "438631", "Dune Part One", "Hollywood"]]
+  );
+  assert.equal(rows[0].name, "Dune");
+  assert.equal(rows[0].og_title, "Dune Part One");
+});
+
+TABS.watchlist.header = ORIGINAL_HEADER;
+TABS.watchlist.rows = ORIGINAL_ROWS;
+sheets.invalidate();
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

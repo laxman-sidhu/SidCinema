@@ -19,7 +19,11 @@ One workbook, three tabs. Tab names must match what Code.gs expects.
 
     People         Name | Role | Industry | TMDB_ID | TMDB_Status
 
-Row 1 must be the header row. Columns are matched by header NAME, not position, so you can reorder them freely and the unnamed spacer is ignored. Renaming a header is the only thing that breaks a column, and it fails loudly rather than writing to the wrong place.
+Row 1 must be the header row. Columns are matched by header NAME, not position, so you can reorder them freely and the unnamed spacer is ignored.
+
+Renaming a header is safe as long as the new spelling is already an alias. The title column accepts Name, Title, Movie, Movie Name, Show or Show Name; the full list is COLUMN_ALIASES in Code.gs and the alias tables in js/data/sheets.js, and both sides have to carry the spelling. A header naming nothing on that list is the one thing that breaks a column, and it fails loudly rather than writing to the wrong place.
+
+Delete the old column when you rename one. If a tab ends up with two columns naming the same field - "Name" added and "Movie" left behind - the first of them wins and the second is ignored, on both sides. That is only useful as a guard: the stale column will quietly sit there holding a value nothing reads.
 
 The Industry column does two jobs: it decides the media type (Web Series means series, everything else means film) and it is the category the library groups by. Nothing is hardcoded, so whatever the column says is what gets counted.
 

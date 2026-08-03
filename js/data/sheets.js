@@ -53,14 +53,29 @@ const TABS = {
   people: { gid: PEOPLE_GID, aliases: PEOPLE_ALIASES, label: "People" }
 };
 
+// The FIRST column naming a field wins; every later one naming the same field
+// is ignored. The `break` gives one column one field; `claimed` gives one field
+// one column, and that is the half that was missing - the old guard tested
+// mapping[INDEX], which can only ever enforce the first rule.
+//
+// Two columns can genuinely name the same field, and a rename is exactly how it
+// happens: add "Name", forget to delete "Movie", and the tab now has two title
+// columns. Code.gs's columnMap() keeps the first and the site kept the LAST,
+// because shapeRows assigns in column order and the later write won. The site
+// then read the title out of one cell while the bridge matched and wrote
+// against another - no error on either side, just rows that would not match
+// themselves. First-wins on both sides is the only version where the two agree.
 function mapColumns(header, aliases) {
   const mapping = {};
+  const claimed = new Set();
   header.forEach((column, index) => {
     const normalised = normaliseHeader(column);
     if (!normalised) return;
     for (const [field, spellings] of Object.entries(aliases)) {
-      if (spellings.includes(normalised) && mapping[index] === undefined) {
+      if (claimed.has(field)) continue;
+      if (spellings.includes(normalised)) {
         mapping[index] = field;
+        claimed.add(field);
         break;
       }
     }

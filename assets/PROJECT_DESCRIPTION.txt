@@ -88,6 +88,10 @@ One Google Sheet, three tabs. SHEET_ID and the gids are in js/config.js.
 
 Columns are found by header name, never by position. This is load-bearing, not stylistic: All Watched has an unnamed spacer column and columns get moved by hand. Both sides do this independently - the alias tables in js/data/sheets.js and COLUMN_ALIASES in Code.gs.
 
+A header can therefore be renamed without touching any code, as long as the new spelling is already in the alias list. Watchlist's title column was "Movie" and is now "Name"; both are aliases of the same field, so both read identically and neither the wire protocol nor the write path notices - writer.js sends canonical field names (name, og_title, tmdb_id) and Code.gs resolves them against whatever the header row says. Two tests pin that.
+
+Where two columns name the SAME field, the first one wins, on both sides. This is the case a rename creates: add "Name", forget to delete "Movie", and the tab has two title columns. Code.gs's columnMap() always kept the first; the site kept the LAST, because its guard was written per-column-index and shapeRows assigns in column order, so the later cell overwrote the earlier. The site then read the title out of one cell while the bridge matched and wrote against another, with no error on either side. First-wins on both sides is the only version where the two agree about which cell is the title.
+
 Industry does two jobs. It decides the media type (Web Series means series, everything else means film) and it is the category the library groups by. Never hardcoded: whatever the column says is what gets counted.
 
 Reads go to the Apps Script bridge, one request for all three tabs. Three separate requests would each pay the script's cold start, which is the slowest part of a first load. If the bridge is unreachable, js/data/sheets.js falls back to Google's gviz endpoint by JSONP, which needs no deployment but does go through Google's few-minute cache.
@@ -319,6 +323,8 @@ Never bulk-edit this stylesheet with a script. Three separate attempts to strip 
 
 CSS ordering. The library page's base styles are declared around 270 lines after the phone media query, and at equal specificity the later rule wins at every width, so mobile overrides written in the earlier block were silently reverted. Anything new goes at the BOTTOM of style.css. Keep it there.
 
+A bare 1fr is not an equal column. `repeat(4, 1fr)` is `repeat(4, minmax(auto, 1fr))`, and that auto minimum is the item's MIN-CONTENT width - the longest unbreakable word inside it. The cast grid was declared that way and a cast list is nothing but long unbreakable words: "Brahmanandam", "Balasubramanian", "Bhagavan". A track holding one was floored at the width of that word and the rest shared what was left, so the four columns came back wildly uneven, and when the words together beat the container the whole grid overflowed the modal and the longest names were clipped at the right edge. The faces are width:100% of their track on a phone, so they inherited it - a small Prabhu beside a large Sonu Sood, same photo pipeline, different arithmetic. The fix is minmax(0, 1fr), and then overflow-wrap on the text, because with the floor gone a word wider than its track paints over its neighbour instead of pushing it out. .detail__cell-val already carried that second half for "$115,000,000"; it was never generalised. Only shows up when a name is long, which is why it read as intermittent. css.test.mjs now fails on any repeat(N, 1fr) under .detail__people or .detail__similars, and on either text class losing its break rule.
+
 Stacking contexts. Two bugs, both from elements creating stacking contexts implicitly. .searchbox has backdrop-filter, so the autocomplete dropdown inside it could not escape and .suggestions (mask-image, also a stacking context) painted over it; fixed by ranking them, .searchbox at 30 and .suggestions at 1. Separately .hero and .results both sat at z-index 1 and the later one buried the dropdown; .hero is now 20.
 
 stopPropagation does not stop sibling listeners. The card controls call it, but the card handler is bound to the same container and registered first, so the modal still opened. Fixed with an explicit guard in js/ui/detail.js, applied on both click and keydown: const IN_CARD = ".cardact, .cardmenu, .card__note". If you add another in-card control, add it to that one constant.
@@ -343,14 +349,15 @@ ES modules will not load over file://. Serve the folder, even locally.
 Tests
 -----
 
-Nine suites in assets/tests/. Seven run with plain node and need nothing installed; flow.test.mjs and modal.test.mjs want jsdom and skip cleanly without it. 112 assertions without jsdom, 135 with.
+Nine suites in assets/tests/. Seven run with plain node and need nothing installed; flow.test.mjs and modal.test.mjs want jsdom and skip cleanly without it. 117 assertions without jsdom, 140 with.
 
     logic       search parsing across all four scopes, title-versus-person,
                 decade and language extraction, the section split, the browse
                 panel's idea of an active filter
-    data        column mapping with the spacer present, id-not-title matching,
-                re-watch de-duplication, no memory drift on a failed write, one
-                call for mark-watched, flag independence, the gate
+    data        column mapping with the spacer present, a renamed header and a
+                header named twice, id-not-title matching, re-watch
+                de-duplication, no memory drift on a failed write, one call for
+                mark-watched, flag independence, the gate
     watchlist   identity: one film, one row, everywhere
     people      co-star searches, and the calls they make
     nav         which entry is marked on each page, and the phone dropdown
@@ -363,7 +370,7 @@ watchlist.test.mjs is built on a slice of the real sheet, because the bug it gua
 
 people.test.mjs asserts the REQUESTS rather than the results, because the whole feature is which endpoint is called with which parameters. A test that only checked the titles would pass just as happily on a call that fetched one actor and ignored the other.
 
-css.test.mjs is the odd one out and the most useful, because the bugs that have actually shipped here are all silent. It asserts that every top-level region outranks .wash, that every class the code emits has a rule somewhere, that no block is left unclosed, that no typeable control drops under 16px in a phone media query, that an image covering a fallback is positioned itself, and that the nav dropdown cannot be clipped by the strip it sits in. It found a real 14px select the moment it was written.
+css.test.mjs is the odd one out and the most useful, because the bugs that have actually shipped here are all silent. It asserts that every top-level region outranks .wash, that every class the code emits has a rule somewhere, that no block is left unclosed, that no typeable control drops under 16px in a phone media query, that an image covering a fallback is positioned itself, that no fixed-count grid of text uses a track with an auto minimum, and that the nav dropdown cannot be clipped by the strip it sits in. It found a real 14px select the moment it was written, and the uneven cast grid the moment that assertion was added.
 
 modal.test.mjs earned its place immediately: it caught prettyDate being called in detail.js while only being defined in cards.js. node --check does not see an undefined identifier, and neither does reading the diff - the modal simply showed "Could not load that title" for every film. Anything that renders from a payload is worth a test that actually renders it.
 
