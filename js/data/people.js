@@ -1,5 +1,4 @@
-// The People tab, indexed for correction and autocomplete. Free and offline:
-// a name the sheet already knows never costs a TMDB or Gemini call.
+// The People tab, indexed for correction and autocomplete: a name the sheet knows never costs a TMDB or Gemini call.
 
 import { fetchTab } from "./sheets.js";
 import * as snapshot from "./snapshot.js";
@@ -23,9 +22,7 @@ function normaliseName(value) {
     .trim();
 }
 
-// Spaces removed. "shahrukh khan" and "shah rukh khan" land here as the same
-// string, which is the most common spelling mistake in Indian names and is
-// fixed for free by comparing this form.
+// Spaces removed, so "shahrukh khan" and "shah rukh khan" land here as the same string.
 function flatten(normalised) {
   return normalised.replace(/ /g, "");
 }
@@ -43,8 +40,7 @@ function dice(left, right) {
   return (2 * shared) / (left.size + right.size);
 }
 
-// Longest common subsequence ratio, which is what SequenceMatcher.ratio
-// approximates. Cheap enough at these string lengths.
+// Longest common subsequence ratio, which is what SequenceMatcher.ratio approximates.
 function ratio(a, b) {
   if (!a.length || !b.length) return 0;
   if (a === b) return 1;
@@ -65,9 +61,7 @@ function ratio(a, b) {
   return (2 * previous[cols - 1]) / (a.length + b.length);
 }
 
-// Best pairing of query words to name words, weighted by word length, so one
-// badly typed word in an otherwise correct name is not diluted by the words
-// that were fine.
+// Best pairing of query words to name words, weighted by length, so one bad word is not diluted by the good ones.
 function tokenSimilarity(queryTokens, nameTokens) {
   if (!queryTokens.length || !nameTokens.length) return 0;
 
@@ -81,9 +75,7 @@ function tokenSimilarity(queryTokens, nameTokens) {
   }
   let covered = totalWeight ? earned / totalWeight : 0;
 
-  // A query covering only part of the name is a partial name, not a
-  // misspelling of the whole thing. Without this the single word "khan" scores
-  // a perfect match against every Khan in the sheet.
+  // A query covering only part of the name is a partial name, not a typo - otherwise "khan" scores perfectly against every Khan.
   if (nameTokens.length > queryTokens.length) {
     covered *= 0.72 + 0.28 * (queryTokens.length / nameTokens.length);
   }
@@ -99,8 +91,7 @@ function scoreNames(query, candidate) {
   const nameFlat = flatten(nameNorm);
   if (queryFlat === nameFlat) return 1;
 
-  // A complete prefix is an unfinished name, not a typo. Scaled by how much of
-  // the name was typed, so "shahrukh" beats "shah" for Shah Rukh Khan.
+  // A complete prefix is an unfinished name, scaled by how much was typed so "shahrukh" beats "shah".
   if (queryFlat.length >= MIN_CORRECTION_LENGTH && nameFlat.startsWith(queryFlat)) {
     return 0.80 + 0.20 * (queryFlat.length / nameFlat.length);
   }
@@ -120,9 +111,7 @@ class PeopleDirectory {
     return this.rows.length > 0;
   }
 
-  // Shaping happens here rather than in load(), so a snapshot and a live read go
-  // through exactly the same path. The derived fields (norm, flat, tokens,
-  // bigrams) are cheap to rebuild and are not stored.
+  // Shaping happens here rather than in load(), so a snapshot and a live read take the same path.
   install(raw) {
     const rows = [];
     const byFlat = new Map();
@@ -152,8 +141,7 @@ class PeopleDirectory {
     this.lastError = null;
   }
 
-  // Synchronous, so autocomplete answers the first keystroke after a refresh
-  // instead of the third.
+  // Synchronous, so autocomplete answers the first keystroke after a refresh rather than the third.
   hydrate() {
     if (this.rows.length) return true;
     const rows = snapshot.load("people");
@@ -181,9 +169,7 @@ class PeopleDirectory {
     return flat ? this.byFlat.get(flat) || null : null;
   }
 
-  // The row this term was most likely trying to name, or null. Returns null
-  // rather than a weak guess: the caller falls through to Gemini and then to a
-  // loose TMDB search, both better answers than a confident wrong one.
+  // Returns null rather than a weak guess: the caller has better fallbacks than a confident wrong answer.
   correct(term) {
     const queryNorm = normaliseName(term);
     const queryFlat = flatten(queryNorm);
@@ -207,10 +193,7 @@ class PeopleDirectory {
     return { ...best, score: Math.round(bestScore * 1000) / 1000 };
   }
 
-  // Four tiers: the whole name starts with what was typed, a word in it does,
-  // it appears anywhere, or it is close enough to be a typo. Within a tier the
-  // sheet's own order wins - a list written by hand is already roughly ordered
-  // by who matters.
+  // Four tiers: name prefix, word prefix, substring, then close-enough typo. Within a tier the sheet's own order wins.
   suggest(term, limit = SUGGEST_LIMIT) {
     const queryNorm = normaliseName(term);
     if (queryNorm.length < SUGGEST_MIN_LENGTH || !this.rows.length) return [];

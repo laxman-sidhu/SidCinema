@@ -1,10 +1,4 @@
-// The ONLY module that changes the sheet. Two rules it holds to:
-//
-// Google first, memory second. A failed remote write changes nothing locally.
-// The reverse order would display changes that were never saved.
-//
-// Update memory, don't re-download. Every confirmed write is applied to the
-// in-memory copy rather than re-read, so a stale cache can never undo it.
+// The ONLY module that changes the sheet: Google first then memory, and every confirmed write updates memory rather than re-reading.
 
 import { APPS_SCRIPT_URL, APPS_SCRIPT_TOKEN, FLAG_YES } from "../config.js";
 import { postPlain } from "../core/http.js";
@@ -66,21 +60,17 @@ export async function addWatched(item, { mustWatch = false, favorite = false } =
     favorite: favorite ? FLAG_YES : ""
   });
 
-  // One call appends to All Watched and deletes from Watchlist. Two calls can
-  // half-fail and leave a title in both.
+  // One call appends to All Watched and deletes from Watchlist: two calls can half-fail and leave a title in both.
   const result = await call("add_watched", row);
 
   const stored = watched.applyAdd({ ...row, must_watch: mustWatch, favorite });
-  // By identity, not by id: the queued row may be TMDB's other record for the
-  // same film, and it has to leave too.
+  // By identity, not by id: the queued row may be TMDB's other record for the same film.
   if (result.removed_from_watchlist) watchlist.applyRemove(row);
 
   return { row: stored, removed_from_watchlist: Boolean(result.removed_from_watchlist) };
 }
 
-// Every one of these takes either a bare id or the whole title. Passing the
-// title matters: the bridge falls back to name-and-year when the id it is given
-// is not in the sheet, which is exactly the case for a film TMDB holds twice.
+// Each takes a bare id or the whole title - the bridge falls back to name-and-year when the id it is given misses.
 export async function removeWatched(target) {
   const payload = identityPayload(target);
   if (!payload.tmdb_id && !payload.name) throw new WriteError("No TMDB id given.");
@@ -89,8 +79,7 @@ export async function removeWatched(target) {
   return { removed: result.removed !== undefined ? Boolean(result.removed) : removed };
 }
 
-// Must Watch and Favorites. One call for both, and only the flags actually
-// named are touched, so liking something never disturbs its must-watch state.
+// Must Watch and Favorites in one call, touching only the flags named, so liking something never disturbs must-watch.
 export async function setFlags(target, { mustWatch = null, favorite = null } = {}) {
   const payload = identityPayload(target);
   if (!payload.tmdb_id && !payload.name) throw new WriteError("No TMDB id given.");
@@ -108,9 +97,7 @@ export async function addWatchlist(item) {
   if (!item.tmdb_id && !item.id) throw new WriteError("That title has no TMDB id, so it cannot be saved.");
   const row = rowFor(item, {});
 
-  // The bridge checks name and year as well as the id before it appends, so a
-  // film already queued under TMDB's other record for it is recognised and
-  // nothing is added. applyAdd does the same check in memory.
+  // The bridge checks name and year as well as the id before appending; applyAdd does the same in memory.
   const result = await call("add_watchlist", row);
   return { row: watchlist.applyAdd(row), already_listed: Boolean(result.already_listed) };
 }
@@ -118,8 +105,7 @@ export async function addWatchlist(item) {
 export async function removeWatchlist(target) {
   const payload = identityPayload(target);
   if (!payload.tmdb_id && !payload.name) throw new WriteError("No TMDB id given.");
-  // Removes EVERY row for this title, so a duplicate that predates the identity
-  // fix goes with it and the queue comes out clean.
+  // Removes EVERY row for this title, so a duplicate that predates the identity fix goes with it.
   const result = await call("remove_watchlist", payload);
   const removed = watchlist.applyRemove(target);
   return { removed: result.removed !== undefined ? Boolean(result.removed) : removed };

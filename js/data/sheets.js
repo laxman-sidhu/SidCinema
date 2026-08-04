@@ -1,10 +1,4 @@
-// Reads the workbook. Columns are matched on header text, never position:
-// All Watched has an unnamed spacer column and columns get moved by hand, so
-// "column 9" would silently read the wrong data the first time one shifted.
-//
-// Two ways in. The Apps Script web app is preferred because it reads the live
-// sheet, so a write is visible immediately. The gviz fallback covers a script
-// that is not deployed yet, at the cost of Google's own few-minute cache.
+// Reads the workbook, matching columns on header text and never position: All Watched has an unnamed spacer and columns get moved by hand.
 
 import { APPS_SCRIPT_URL, SHEET_ID, WATCHED_GID, WATCHLIST_GID, PEOPLE_GID } from "../config.js";
 import { getJSON } from "../core/http.js";
@@ -53,18 +47,7 @@ const TABS = {
   people: { gid: PEOPLE_GID, aliases: PEOPLE_ALIASES, label: "People" }
 };
 
-// The FIRST column naming a field wins; every later one naming the same field
-// is ignored. The `break` gives one column one field; `claimed` gives one field
-// one column, and that is the half that was missing - the old guard tested
-// mapping[INDEX], which can only ever enforce the first rule.
-//
-// Two columns can genuinely name the same field, and a rename is exactly how it
-// happens: add "Name", forget to delete "Movie", and the tab now has two title
-// columns. Code.gs's columnMap() keeps the first and the site kept the LAST,
-// because shapeRows assigns in column order and the later write won. The site
-// then read the title out of one cell while the bridge matched and wrote
-// against another - no error on either side, just rows that would not match
-// themselves. First-wins on both sides is the only version where the two agree.
+// The FIRST column naming a field wins - `claimed` gives one field one column, `break` gives one column one field. Code.gs does the same, or the two disagree about which cell is the title.
 function mapColumns(header, aliases) {
   const mapping = {};
   const claimed = new Set();
@@ -105,8 +88,7 @@ function shapeRows(header, rows, aliases) {
 
 let bridgeRead = null;
 
-// One request for all three tabs. Three separate calls would each pay the
-// script's cold start.
+// One request for all three tabs: three would each pay the script's cold start.
 function readBridge() {
   if (!bridgeRead) {
     bridgeRead = getJSON(`${APPS_SCRIPT_URL}?action=read`, { timeout: 25000 })
@@ -171,8 +153,7 @@ export async function fetchTab(which) {
       return shapeRows(payload.header, payload.rows || [], tab.aliases);
     }
   } catch {
-    // Fall through. A missing deployment should cost the write buttons, not
-    // the whole site.
+    // Fall through. A missing deployment should cost the write buttons, not the whole site.
   }
 
   try {

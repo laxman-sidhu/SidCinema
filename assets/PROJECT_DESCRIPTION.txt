@@ -64,7 +64,7 @@ Layout
     assets/apps_script/        Code.gs, the read and write bridge
     assets/images/             the favicon and the two portraits
     assets/tests/              nine Node suites, seven with no dependencies
-    assets/                    this file and SETUP.txt
+    assets/                    this file, SETUP.txt and DEBUGGING.txt
 
 The root holds four things and nothing else: the three HTML pages, css/, js/ and assets/. Anything not served to a visitor on every page load lives under assets/, which is why the bridge, the docs and the tests are down there.
 
@@ -119,6 +119,8 @@ The id on the card is not always the id in the sheet. annotate() sets sheet_id a
 Removing takes every row for a title, not the first. A duplicate that predates this has to leave with the row that was clicked, or it comes straight back on the next load. Both js/data/watchlist.js and Code.gs do this.
 
 A re-watch is one title. The library and the stats both de-duplicate on identity, so the per-industry buckets sum to the totals rather than exceeding them.
+
+The page therefore counts DISTINCT TITLES and the sheet counts ROWS, and the two are allowed to differ. That difference used to be completely silent: 1,042 titles against 1,043 rows, Bollywood one short of its own column, no message and nothing to search for. firstSeen() now takes an onCollapse callback, stats() carries duplicates and distinct, and ?dupes=1 on the library page lists every collapse (DEBUGGING.txt collects that and every other debug switch in one place) - the row that was dropped, the row it merged into, and the key they had in common. The key is the diagnosis: "id:20453" says a TMDB id was pasted onto two rows, "t:ved|2022" says two rows agree on title and year. The first is a typo in the sheet, the second is either a genuine second entry for one film or the accepted cost of title-plus-year identity, and they are different edits.
 
 Title normalisation is unicode-aware, and had to be. It used \w, which is ASCII-only, so every character of a Devanagari, Korean or Japanese title became a space and the whole title normalised to the empty string - meaning any row with a non-Latin title and no TMDB id was never indexed and was invisible to title matching. It is [^\p{L}\p{N}\s] with the /u flag now. The flag is not optional; without it \p{...} is not a character class at all.
 
@@ -349,15 +351,16 @@ ES modules will not load over file://. Serve the folder, even locally.
 Tests
 -----
 
-Nine suites in assets/tests/. Seven run with plain node and need nothing installed; flow.test.mjs and modal.test.mjs want jsdom and skip cleanly without it. 117 assertions without jsdom, 140 with.
+Nine suites in assets/tests/. Seven run with plain node and need nothing installed; flow.test.mjs and modal.test.mjs want jsdom and skip cleanly without it. 119 assertions without jsdom, 142 with.
 
     logic       search parsing across all four scopes, title-versus-person,
                 decade and language extraction, the section split, the browse
                 panel's idea of an active filter
     data        column mapping with the spacer present, a renamed header and a
                 header named twice, id-not-title matching, re-watch
-                de-duplication, no memory drift on a failed write, one call for
-                mark-watched, flag independence, the gate
+                de-duplication and what the de-duplicator reports, no memory
+                drift on a failed write, one call for mark-watched, flag
+                independence, the gate
     watchlist   identity: one film, one row, everywhere
     people      co-star searches, and the calls they make
     nav         which entry is marked on each page, and the phone dropdown

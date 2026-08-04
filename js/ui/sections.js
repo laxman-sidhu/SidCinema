@@ -1,13 +1,4 @@
-// Splits a result list into the sections the UI renders. There are exactly
-// three: released titles, everything not out yet, and titles related to a match.
-//
-// Upcoming is separated because a card you cannot watch tonight is a different
-// kind of answer to one you can. Related is separated because it answers a
-// different question to the one that was asked, and mixing it in would make a
-// search look like it returned twenty wrong films.
-//
-// One guarantee the rest of the app relies on: every title lands in exactly one
-// section, and an empty section is dropped rather than shown empty.
+// Splits a result list into released, upcoming and related. Every title lands in exactly one section, and an empty section is dropped.
 
 import { today } from "../core/util.js";
 
@@ -24,8 +15,7 @@ function noun(media) {
 function isUpcoming(item, when) {
   const date = String(item.release_date || "").trim();
   if (date) return date > (when || today());
-  // No date at all. Anything already rated is an old title with sloppy
-  // metadata; anything unrated is an announced project.
+  // No date at all: anything already rated is an old title with sloppy metadata, anything unrated is an announced project.
   return !item.vote_count && !item.rating;
 }
 
@@ -62,8 +52,7 @@ export function buildSections(items, { media = "movie", relatedTo = null, when =
 
   const filled = sections.filter(section => section.movies.length);
 
-  // Only released titles came back, so there is nothing to tell apart and the
-  // heading would just be a label on the whole page.
+  // Only released titles came back, so the heading would just be a label on the whole page.
   if (filled.length === 1 && filled[0].key === RELEASED) {
     filled[0] = { ...filled[0], title: "", icon: "" };
   }

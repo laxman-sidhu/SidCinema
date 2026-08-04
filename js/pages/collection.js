@@ -1,10 +1,4 @@
-// One controller for BOTH /watched and /watchlist, driven by PAGE_CONFIG set in
-// each page. Don't fork it into two files: the pages differ in their source and
-// their wording, not in their behaviour.
-//
-// Favourites and Must Watch are VIEWS here, not pages. They are flags on an All
-// Watched row, so separate pages would mean the same title having three cards
-// and a heart ticked on one not updating the others.
+// One controller for BOTH watched.html and watchlist.html, driven by PAGE_CONFIG. Favourites and Must Watch are views, not pages.
 
 import { esc, debounce, orderCategories } from "../core/util.js";
 import { gridMarkup } from "../ui/cards.js";
@@ -31,9 +25,7 @@ const state = {
   stats: {}
 };
 
-// label is what the control says; the rest is what the page says once you are
-// there. A view that changes the grid but not the heading leaves you unsure
-// which collection you are looking at.
+// label is what the control says; the rest is what the page says once you are there.
 const VIEWS = [
   {
     key: "",
@@ -67,14 +59,11 @@ function grab() {
   ].forEach(id => { dom[id] = document.getElementById(id); });
 }
 
-// The view rides in the URL as ?view=favorite. It used to also have a row of
-// pills here, but the navbar now carries all four destinations, so the pills were
-// a second control for the same thing sitting six inches below the first.
+// The view rides in the URL as ?view=favorite. The navbar carries all four destinations, so there are no pills here.
 function setView(key, push = true) {
   state.view = key;
   state.shown = PAGE_SIZE;
-  // Favourites hold a different set of genres from the whole library, so the
-  // list follows the view as well as the industry.
+  // Favourites hold a different set of genres, so the list follows the view as well as the industry.
   refillGenres();
   paintSummary();
   paint();
@@ -111,20 +100,11 @@ function fillFacet(select, entries, allLabel) {
   select.innerHTML = `<option value="">${esc(allLabel)}</option>`
     + entries.map(entry =>
       `<option value="${esc(entry.label)}">${esc(entry.label)} (${entry.count.toLocaleString()})</option>`).join("");
-  // Setting a value no option carries leaves the select on "", which is the
-  // right answer: the choice is gone, so the filter is gone with it.
+  // Setting a value no option carries leaves the select on "", which is right: the choice is gone, so the filter is gone.
   if (current) select.value = current;
 }
 
-// The genres actually used by the rows on screen, which is not the same as the
-// genres in the sheet.
-//
-// Standing in Bollywood and being offered Western, Bhangra and forty others is
-// a list of forty ways to empty the grid: only four of them are on a Bollywood
-// row. So the list is rebuilt from the rows that survive the industry and the
-// view, and the counts beside each one are the counts you will actually get.
-// The same narrowing the mark-watched dialog already does when you pick an
-// industry, applied to the control that filters.
+// The genres actually used by the rows on screen, not every genre in the sheet - only four of forty appear on a Bollywood row.
 function genreOptions() {
   const rows = state.view ? state.all.filter(item => item[state.view]) : state.all;
   const scoped = state.category
@@ -138,9 +118,7 @@ function genreOptions() {
   return orderCategories(counts);
 }
 
-// Called whenever the industry changes. A genre that no longer exists under the
-// new industry is dropped rather than left selected: a filter naming something
-// the list no longer offers is a grid that is empty for no visible reason.
+// A genre that no longer exists under the new industry is cleared, or the grid empties for no visible reason.
 function refillGenres() {
   if (!dom.collGenre) return;
   fillFacet(dom.collGenre, genreOptions(), "All genres");
@@ -196,17 +174,7 @@ function paint() {
   }
 }
 
-// The numbers, as tiles rather than a run-on sentence. A comma-separated line
-// reads as a caption and gets skipped; the counts are the most concrete thing on
-// the page and should be the easiest to take in.
-//
-// They count the CURRENT VIEW, not the whole sheet. Standing in Must watch and
-// being told there are 1,013 titles and 54 favourites answers a question nobody
-// asked, and made the view look like it had not filtered anything.
-//
-// Three tiles, no more: the total for this view, then the film/series split of
-// it. The cross-reference tile ("also must watch") went because it invited exactly
-// the arithmetic the numbers are meant to save you - the flags are on the cards.
+// Three tiles counting the CURRENT VIEW, not the whole sheet: a view reporting the sheet's numbers looks like it did not filter.
 function paintSummary() {
   if (!dom.collStats) return;
 
@@ -246,9 +214,7 @@ function paintSummary() {
     + `<span class="stat__n">${tile.n.toLocaleString()}</span>`
     + `<span class="stat__label">${esc(tile.label)}</span></div>`).join("");
 
-  // The split by industry, as a bar rather than a sentence. Proportions are the
-  // point, and "450 Hollywood, 300 Bollywood" makes you do that arithmetic
-  // yourself. Counted over the same rows as the tiles above.
+  // The split by industry as a bar rather than a sentence, over the same rows as the tiles above.
   if (!dom.collSplit) return;
 
   const counts = {};
@@ -280,6 +246,51 @@ function paintSummary() {
     + "</div>";
 }
 
+// ?dupes=1 names every row firstSeen() collapsed. Off by default: a maintenance view over the sheet, not part of reading it.
+function paintDuplicates() {
+  const wanted = new URLSearchParams(window.location.search).has("dupes");
+  let panel = document.getElementById("collDupes");
+
+  if (!wanted || !PAGE.views) {
+    if (panel) panel.remove();
+    return;
+  }
+
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "collDupes";
+    panel.className = "dupes";
+    dom.collGrid.parentNode.insertBefore(panel, dom.collGrid);
+  }
+
+  const list = (state.stats && state.stats.duplicates) || [];
+  const rows = state.stats ? state.stats.total_rows : 0;
+
+  if (!list.length) {
+    panel.innerHTML = `<p class="dupes__lead">${rows.toLocaleString()} rows in the sheet, `
+      + `${rows.toLocaleString()} titles on the page. Nothing was collapsed.</p>`;
+    return;
+  }
+
+  const line = entry => {
+    const side = row => `${esc(row.name || row.og_title || "(no name)")}`
+      + `${row.year ? ` (${row.year})` : " (no year)"}`
+      + ` &middot; ${esc(row.industry || "no industry")}`
+      + ` &middot; id ${row.tmdb_id == null ? "\u2014" : row.tmdb_id}`;
+    return `<li class="dupes__item">`
+      + `<div class="dupes__why">${esc(entry.reason)}</div>`
+      + `<div class="dupes__row"><b>dropped</b> ${side(entry.dropped)}</div>`
+      + `<div class="dupes__row"><b>kept</b> ${side(entry.kept)}</div>`
+      + `</li>`;
+  };
+
+  panel.innerHTML =
+    `<p class="dupes__lead">${rows.toLocaleString()} rows in the sheet, `
+    + `${(rows - list.length).toLocaleString()} titles on the page. `
+    + `${list.length.toLocaleString()} row${list.length === 1 ? "" : "s"} collapsed:</p>`
+    + `<ol class="dupes__list">${list.map(line).join("")}</ol>`;
+}
+
 function itemForCard(card) {
   if (!card) return null;
   const id = String(card.dataset.id);
@@ -288,30 +299,25 @@ function itemForCard(card) {
 
 // --- loading ----------------------------------------------------------------
 
-// Paint from the snapshot first, then correct from the live read. On a library
-// of a thousand rows the difference is a page that is there on arrival against
-// one that spends a second empty.
+// Paint from the snapshot first, then correct from the live read.
 function paintFrom(data) {
   state.all = data.items;
   state.stats = data.stats;
   fillFacet(dom.collCategory, data.categories || [], "All industries");
-  // Not data.genres: that is every genre in the sheet. The list is scoped to
-  // the industry and the view currently chosen.
+  // Not data.genres, which is every genre in the sheet: this is scoped to the industry and view currently chosen.
   refillGenres();
   paintSummary();
+  paintDuplicates();
   paint();
 }
 
 function currentData() {
-  // The whole watched library, not just its set of ids: the watchlist filters
-  // itself against it by identity, so a film watched under one TMDB id no
-  // longer sits in the queue under TMDB's other id for it.
+  // The whole watched library, not just its ids: the watchlist filters itself against it by identity.
   return PAGE.views ? watched.library() : watchlist.library(watched);
 }
 
 async function load() {
-  // Both, always: && would skip the watched snapshot whenever the watchlist had
-  // none, and the queue is filtered against the watched library.
+  // Both, always: && would skip the watched snapshot whenever the watchlist had none.
   const cached = PAGE.views
     ? watched.hydrate()
     : [watchlist.hydrate(), watched.hydrate()][0];
@@ -358,9 +364,7 @@ function wire() {
     dom[id].addEventListener("change", () => {
       state[key] = dom[id].value;
       state.shown = PAGE_SIZE;
-      // Industry first, then genre - a sequence, not a pair. Picking one
-      // rebuilds the other, and the reverse would be a list that narrows
-      // itself into a corner.
+      // Industry first, then genre - a sequence, not a pair, or the two narrow each other into a corner.
       if (key === "category") refillGenres();
       paint();
     });
@@ -379,9 +383,7 @@ function wire() {
     wireTheme();
   });
 
-  // This page had no reload at all: the button was in the navbar on every page
-  // but only the search page ever bound it, so here it was a control that
-  // answered a click with nothing.
+  // This page had no reload at all: the navbar button was only ever bound on the search page.
   wireRefresh(async () => {
     const { invalidate } = await import("../data/sheets.js");
     invalidate();
@@ -403,8 +405,7 @@ function wire() {
   detail.attach(dom.collGrid);
   cardactions.attach(dom.collGrid, itemForCard, {
     onChange: (item, action) => {
-      // Unmarking something watched takes it out of this collection entirely,
-      // so the row has to leave rather than sit there with an empty tick.
+      // Unmarking something watched takes it out of this collection, so the row has to leave.
       if (PAGE.views && action === "watched" && !item.watched) {
         state.all = state.all.filter(row => row !== item);
       }
@@ -427,8 +428,7 @@ export async function start() {
   wireTheme();
   grab();
 
-  // The chosen view rides in the URL, so a Favourites link is shareable and the
-  // back button works between views.
+  // The chosen view rides in the URL, so a Favourites link is shareable and the back button works.
   const wanted = new URL(window.location.href).searchParams.get("view") || "";
   if (PAGE.views && VIEWS.some(view => view.key === wanted)) state.view = wanted;
 

@@ -12,10 +12,7 @@ import {
   orderCategories, formatCategories
 } from "../core/util.js";
 
-// Web Series is a series; every other industry is film. This is the DISPLAY
-// answer, and it always gives one: a card needs a media type even when the
-// Industry cell is blank. What the row actually knows is mediaOf(), which
-// answers "" for a blank cell - see js/data/identity.js.
+// Web Series is a series and everything else a film. The DISPLAY answer, which always gives one; mediaOf() answers "" for a blank cell.
 export function mediaForIndustry(industry) {
   const text = String(industry || "").trim().toLowerCase();
   return text === SERIES_INDUSTRY.trim().toLowerCase() ? TV : MOVIE;
@@ -48,6 +45,26 @@ function shape(raw) {
   return record;
 }
 
+// One collapse in the terms the sheet is edited in. The key is the diagnosis: "id:550" is a pasted id, "t:ved|2022" is an agreeing title and year.
+function describeCollapse(dropped, kept, key) {
+  const pick = row => ({
+    name: row.name,
+    og_title: row.og_title,
+    year: row.year,
+    tmdb_id: row.tmdb_id,
+    industry: row.industry,
+    genre: row.genre
+  });
+  return {
+    key,
+    // A shared id and a shared title+year are different mistakes, so they get different sentences.
+    reason: key.startsWith("id:")
+      ? `both rows carry TMDB id ${key.slice(3)}`
+      : `both rows normalise to "${key.slice(2)}" (title|year)`,
+    dropped: pick(dropped),
+    kept: pick(kept)
+  };
+}
 
 class WatchedLibrary {
   constructor() {
@@ -61,9 +78,7 @@ class WatchedLibrary {
     this.fromSnapshot = false;
   }
 
-  // Synchronous, so it can run before the first paint. The index is populated
-  // from the last known sheet and the cards are green in the first frame; the
-  // live read replaces it moments later.
+  // Synchronous, so it can run before the first paint; the live read replaces it moments later.
   hydrate() {
     if (this.rows.length) return true;
     const rows = snapshot.load("watched");
@@ -94,18 +109,14 @@ class WatchedLibrary {
     const pooled = new Set();
 
     for (const record of rows) {
-      // Title AND year, for every row. This is what recognises a film TMDB
-      // holds twice: "Ved" is 1037690 in the sheet and 913544 in search, and
-      // ved|2022 is the only thing the two have in common.
+      // Title AND year, for every row: ved|2022 is all the two Ved records have in common.
       for (const key of indexKeys(record)) if (!byKey.has(key)) byKey.set(key, record);
 
       if (record.tmdb_id !== null) {
         if (!byId.has(record.tmdb_id)) byId.set(record.tmdb_id, record);
         pooled.add(record.tmdb_id);
       } else {
-        // Only rows without an id are indexed by title. Indexing every row by
-        // title once meant one watched "The Call" marked every other film of
-        // that name as watched.
+        // Only rows without an id are indexed by title - indexing every row that way marked every "The Call" watched.
         const key = normaliseTitle(record.og_title || record.name);
         if (key && !byTitle.has(key)) byTitle.set(key, record);
       }
@@ -120,13 +131,7 @@ class WatchedLibrary {
     this.lastError = null;
   }
 
-  // Three rungs, cheapest and most certain first: the id, then title AND year,
-  // then - only for rows that have no id at all - the bare title.
-  //
-  // The bare title stays last and stays restricted to id-less rows. Indexing
-  // every row by title alone is the bug this project already fixed once: one
-  // watched "The Call" marked every other film of that name as watched. Adding
-  // the year is what makes the middle rung safe.
+  // Three rungs, cheapest and most certain first: the id, then title AND year, then the bare title for id-less rows only.
   match(tmdbId, originalTitle = "", title = "", record = null) {
     const wanted = mediaWanted(record);
 
@@ -148,8 +153,7 @@ class WatchedLibrary {
     return null;
   }
 
-  // The row for this title, or null. Same shape as watchlist.find(), so either
-  // library can be handed to anything that just wants to ask "is this in here".
+  // Same shape as watchlist.find(), so either library answers "is this in here".
   find(value) {
     const record = asRecord(value);
     if (!record) return null;
@@ -168,9 +172,7 @@ class WatchedLibrary {
       return item;
     }
     item.watched = true;
-    // The id of the row that ACTUALLY sits in the sheet. When a film is on TMDB
-    // twice that is not the id on the card, and every flag write has to use
-    // this one or the bridge will not find the row.
+    // The id of the row that ACTUALLY sits in the sheet, which is not the card's id when TMDB holds the film twice.
     item.sheet_id = found.row.tmdb_id;
     item.watched_via = found.via;
     item.watched_name = found.row.name || found.row.og_title;
@@ -192,12 +194,7 @@ class WatchedLibrary {
     return orderCategories(counts);
   }
 
-  // Every genre in the sheet, or only those already used within one industry.
-  //
-  // The narrowed form is what the mark-watched dialog offers once an industry is
-  // chosen. A Bollywood row has never been tagged "Western" and a Hollywood one
-  // has never been tagged "Bhangra", so showing the whole list under both means
-  // scrolling past forty irrelevant options to reach the four that apply.
+  // Every genre in the sheet, or only those already used within one industry - a Bollywood row has never been tagged "Western".
   genres(industry) {
     const wanted = industry ? cleanLabel(industry) : "";
     const counts = {};
@@ -208,8 +205,7 @@ class WatchedLibrary {
     return orderCategories(counts);
   }
 
-  // --- keeping memory in step with a write ---------------------------------
-  // Called only after the bridge confirms the edit.
+  // --- keeping memory in step with a write, only after the bridge confirms ---
 
   applyAdd(record) {
     const row = Object.assign(blankRow(), record);
@@ -221,8 +217,7 @@ class WatchedLibrary {
     row.must_watch = Boolean(row.must_watch);
     row.favorite = Boolean(row.favorite);
 
-    // Already watched under any of its identities: set the flags on the row
-    // that is there rather than adding a second one for the same film.
+    // Already watched under one of its identities: set the flags on that row rather than adding a second.
     const existing = this.find(row);
     if (existing) {
       return this.applyFlags(existing.tmdb_id, row.must_watch, row.favorite) || existing;
@@ -241,8 +236,7 @@ class WatchedLibrary {
     return row;
   }
 
-  // Takes a bare id or a whole title, because the id on the card is not always
-  // the id in the sheet.
+  // Takes a bare id or a whole title, because the id on the card is not always the id in the sheet.
   applyFlags(target, mustWatch, favorite) {
     const row = this.find(target);
     if (!row) return null;
@@ -255,8 +249,7 @@ class WatchedLibrary {
   applyRemove(tmdbId) {
     const id = Number(tmdbId);
     const before = this.rows.length;
-    // install() rebuilds every index, so byKey and byTitle cannot be left
-    // pointing at a row that is no longer in this.rows.
+    // install() rebuilds every index, so byKey and byTitle cannot be left pointing at a row that has gone.
     this.install(this.rows.filter(row => row.tmdb_id !== id));
     snapshot.save("watched", this.rows);
     return this.rows.length !== before;
@@ -298,9 +291,7 @@ class WatchedLibrary {
     return {
       items,
       genres: orderCategories(genreCounts),
-      // EVERY industry, not stats.categories - that one counts films only, so
-      // "Web Series" lived in series_categories and never reached the library's
-      // industry dropdown. The dropdown filters rows, and a series is a row.
+      // EVERY industry, not stats.categories - that counts films only, so "Web Series" never reached the dropdown.
       categories: this.industries(),
       series_categories: stats.series_categories,
       stats
@@ -312,7 +303,9 @@ class WatchedLibrary {
     const seriesCounts = {};
     let movies = 0;
     let series = 0;
-    const counted = firstSeen();
+    // The library counts DISTINCT TITLES and the sheet counts ROWS; ?dupes=1 names the difference.
+    const duplicates = [];
+    const counted = firstSeen((row, kept, key) => duplicates.push(describeCollapse(row, kept, key)));
     let mustWatch = 0;
     let favorites = 0;
 
@@ -336,6 +329,9 @@ class WatchedLibrary {
 
     return {
       total_rows: this.rows.length,
+      // total_rows minus duplicates.length, so the gap is a number the page can show rather than one you work out.
+      distinct: movies + series,
+      duplicates,
       movies,
       series,
       must_watch: mustWatch,

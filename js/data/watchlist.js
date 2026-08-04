@@ -1,8 +1,4 @@
-// The Watchlist tab. Same columns as All Watched minus the two flags.
-//
-// Matching is by IDENTITY, not by TMDB id alone - see js/data/identity.js. A
-// film TMDB holds twice was invisible to its own row: the card showed no
-// watchlist state and clicking it appended a second row for the same film.
+// The Watchlist tab, the same columns as All Watched minus the two flags. Matching is by identity - see js/data/identity.js.
 
 import { fetchTab } from "./sheets.js";
 import * as snapshot from "./snapshot.js";
@@ -26,11 +22,7 @@ function shape(raw) {
     tmdb_id: parseId(raw.tmdb_id),
     year: parseId(raw.year)
   };
-  // media is what the card is rendered as and always has a value. media_hint is
-  // what the row actually KNOWS, and is "" when the Industry cell is blank -
-  // which it is for most rows the site adds, because a TMDB result carries no
-  // industry to copy. Matching uses the hint, so an unknown row matches either
-  // kind rather than being wrongly pinned to "movie".
+  // media is what the card renders as; media_hint is what the row KNOWS, and is "" when Industry is blank so it matches either kind.
   record.media = mediaForIndustry(record.industry);
   record.media_hint = mediaOf(record.industry);
   if (record.tmdb_id === null && !record.og_title && !record.name) return null;
@@ -80,8 +72,7 @@ class WatchlistLibrary {
     this.lastError = null;
   }
 
-  // The row for this title, or null. Accepts a bare id, a TMDB result or a
-  // sheet row.
+  // Accepts a bare id, a TMDB result or a sheet row.
   find(value) {
     const record = asRecord(value);
     if (!record) return null;
@@ -99,8 +90,7 @@ class WatchlistLibrary {
     return null;
   }
 
-  // Every row for this title, not just the first. Duplicates already in the
-  // sheet have to leave together, or removing one leaves the other behind.
+  // Every row for this title, not just the first: duplicates already in the sheet have to leave together.
   matches(value) {
     const record = asRecord(value);
     if (!record) return [];
@@ -122,9 +112,7 @@ class WatchlistLibrary {
   annotate(item) {
     const row = this.find(item);
     item.watchlisted = Boolean(row);
-    // The id of the row that ACTUALLY sits in the sheet, which is not always the
-    // id on the card. Every write uses this one, or a remove would ask the
-    // bridge to delete a row that was never there.
+    // The id of the row that ACTUALLY sits in the sheet, or a remove would ask the bridge to delete a row that was never there.
     item.watchlist_id = row ? row.tmdb_id : null;
     return item;
   }
@@ -146,8 +134,7 @@ class WatchlistLibrary {
     row.media = mediaForIndustry(row.industry);
     row.media_hint = mediaOf(row.industry);
 
-    // Already queued under one of its identities, so nothing is appended. This
-    // is the memory-side half of the duplicate fix; the bridge holds the other.
+    // Already queued under one of its identities. The memory-side half of the duplicate fix; the bridge holds the other.
     const existing = this.find(row);
     if (existing) return existing;
 
@@ -158,8 +145,7 @@ class WatchlistLibrary {
     return row;
   }
 
-  // Removes EVERY row for this title, so a duplicate that predates the fix
-  // leaves with the row that was clicked.
+  // Removes EVERY row for this title, so a duplicate that predates the fix leaves with the row that was clicked.
   applyRemove(value) {
     const doomed = new Set(this.matches(value));
     if (!doomed.size) return false;
@@ -168,14 +154,7 @@ class WatchlistLibrary {
     return true;
   }
 
-  // Anything already watched is dropped from the view. The row is removed from
-  // the sheet by the same Apps Script call that marks it watched, so this only
-  // covers a row edited by hand in the workbook - or a film watched under one
-  // TMDB id and queued under another.
-  //
-  // watchedSource is the watched library itself, so the check is the same
-  // identity match used everywhere else. A plain Set of ids is still accepted,
-  // because that is what this took before.
+  // Anything already watched is dropped from the view, by identity. A plain Set of ids is still accepted.
   library(watchedSource) {
     const items = [];
     const genreCounts = {};

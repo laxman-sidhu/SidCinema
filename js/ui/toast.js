@@ -1,21 +1,9 @@
-// Feedback for anything that takes a round trip.
-//
-// The problem this solves: an Apps Script write takes one to two seconds, and
-// during that time the old build faded the card to 62% and disabled it. Fading
-// something out and switching it off is the visual language of broken, so a
-// working save read as a freeze.
-//
-// A pending toast is returned to the caller as a handle, so the same toast that
-// said "Adding to watched" becomes "Added to watched" rather than being replaced
-// by a second one. One action, one strip on screen.
+// Feedback for anything that takes a round trip. A pending toast is returned as a handle, so one action leaves one strip on screen.
 
 let host = null;
 
 function mount() {
-  // Rebuilt when the cached host is no longer part of the document it is meant
-  // to be in. A strip appended to a page that has since been replaced swallows
-  // every toast silently, which is the one failure mode feedback code must not
-  // have.
+  // Rebuilt when the cached host has left the document, or every toast is swallowed silently.
   if (host && host.isConnected && host.ownerDocument === document) return host;
   host = document.createElement("div");
   host.className = "toasts";
@@ -45,8 +33,7 @@ function dismiss(node, after) {
   }, after);
 }
 
-// A handle, not a fire-and-forget. Call succeed or fail on it when the wire
-// answers; the strip on screen changes rather than a new one appearing.
+// A handle, not fire-and-forget: call succeed or fail on it when the wire answers.
 export function pending(text) {
   const node = build(text, "pending");
   mount().appendChild(node);

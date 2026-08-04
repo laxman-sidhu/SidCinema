@@ -2,9 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- viewport-fit=cover lets env(safe-area-inset-*) report real values, which
-       keeps the header and the browse drawer clear of a notch rather than
-       tucked underneath one. -->
+  <!-- viewport-fit=cover lets env(safe-area-inset-*) report real values, so the header and drawer stay clear of a notch. -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>SidCinema</title>
   <meta name="description" content="Search movies and web series, and instantly see which ones I have already watched.">
@@ -48,8 +46,7 @@
         <span class="wordmark__gloss" aria-hidden="true">French for "Movie Discovery"</span>
       </a>
 
-      <!-- Built by js/ui/nav.js from one list, so every page carries the same
-           destinations and adding one is a change in a single file. -->
+      <!-- Built by js/ui/nav.js from one list, so adding a destination is a change in a single file. -->
       <div class="topbar__tools" id="navTools"></div>
     </div>
   </header>
@@ -74,9 +71,7 @@
         </button>
       </div>
 
-      <!-- One bar, one row. The magnifier submits, Enter submits, and the
-           dropdown says what the phrase IS - which is the other half of choosing
-           a TMDB endpoint. Options come from js/search/scope.js. -->
+      <!-- One bar, one row. The dropdown says what the phrase IS, which is the other half of choosing a TMDB endpoint; options come from js/search/scope.js. -->
       <form class="searchbox" id="searchForm" autocomplete="off" role="search">
         <label class="visually-hidden" for="searchInput">Search</label>
 
@@ -100,9 +95,7 @@
           <svg class="scopepick__caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
         </div>
 
-        <!-- Name suggestions from my own people sheet rather than TMDB. Only
-             shown under the Person scope, because that sheet is the only local
-             list the app holds. -->
+        <!-- Name suggestions from my own people sheet, shown only under the Person scope - the only local list the app holds. -->
         <div class="acbox" id="peopleBox" hidden>
           <ul class="acbox__list" id="peopleList" role="listbox" aria-label="Matching people"></ul>
         </div>
@@ -120,9 +113,7 @@
     <div class="toolbar" id="toolbar" hidden>
       <div class="toolbar__head">
         <div>
-          <!-- Above the headline on purpose. It answers "why am I looking at
-               this?", and an explanation printed underneath the thing it
-               explains has already been read too late. -->
+          <!-- Above the headline on purpose: an explanation printed under the thing it explains has already been read too late. -->
           <p class="toolbar__fixed" id="resultsCorrected" hidden></p>
           <h2 class="toolbar__title" id="resultsHeadline">Trending this week</h2>
         </div>

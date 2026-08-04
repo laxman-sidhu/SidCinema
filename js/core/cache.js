@@ -1,5 +1,4 @@
-// Two layers. The map answers within a page, sessionStorage answers across a
-// reload, which is what makes a second visit paint immediately.
+// Two layers: the map answers within a page, sessionStorage across a reload.
 
 const memory = new Map();
 const PREFIX = "sc:";

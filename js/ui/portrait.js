@@ -1,13 +1,4 @@
-// "Made with love by me" - and "me" opens who that is.
-//
-// Two photographs, one per theme: the colour one belongs to the pastel light
-// scheme and the black and white one to the dark. Not a filter and not a
-// preference - they are two different photographs, and each was taken to sit in
-// the scheme it appears in.
-//
-// WebP, ~28KB each against ~700KB for the JPEGs they came from, and neither is
-// fetched until "me" is clicked for the first time. A portrait nobody opened
-// should cost nothing, so there is no <img> in the page until then.
+// "me" opens a photograph, one per theme. Neither is fetched until the word is first clicked, so a portrait nobody opens costs nothing.
 
 const SOURCES = {
   light: { src: "assets/images/me-light.webp", alt: "Laxman, in colour" },
@@ -40,16 +31,14 @@ function build() {
   document.body.appendChild(sheet);
 
   sheet.addEventListener("click", event => {
-    // The backdrop closes it; the photograph does not. A click on the thing you
-    // just opened should not put it away.
+    // The backdrop closes it; the photograph does not.
     if (event.target.closest("[data-portrait-close]")) close();
   });
 
   return sheet;
 }
 
-// Swapped whenever the theme changes while it is open, so the toggle keeps
-// working with the sheet up rather than leaving the wrong photograph behind.
+// Swapped whenever the theme changes while it is open, so the toggle keeps working with the sheet up.
 function paint() {
   if (!sheet) return;
   const wanted = SOURCES[currentTheme()];
@@ -63,9 +52,7 @@ function open() {
   paint();
   node.hidden = false;
 
-  // The class lands a frame after the unhide, because [hidden] is display:none
-  // and a transition cannot run from display:none. The same three-part dance
-  // the browse drawer needs.
+  // The class lands a frame after the unhide, because a transition cannot run from display:none.
   requestAnimationFrame(() => {
     requestAnimationFrame(() => node.classList.add("is-open"));
   });
@@ -100,8 +87,7 @@ export function wirePortrait() {
     if (event.key === "Escape" && opened) close();
   });
 
-  // The theme button is elsewhere and knows nothing about this, so listen for
-  // the attribute rather than trying to hook the button.
+  // Listen for the attribute rather than hooking the theme button, which knows nothing about this.
   new MutationObserver(() => { if (opened) paint(); })
     .observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 }

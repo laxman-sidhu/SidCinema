@@ -1,10 +1,4 @@
-// Who may press the write buttons.
-//
-// This runs in the browser, so it is a convenience and not a security boundary:
-// it stops an accidental click and a casual visitor, nothing more. The thing
-// that actually protects the sheet is APPS_SCRIPT_TOKEN, which Code.gs checks
-// before it touches a cell. SETUP.txt section 7 explains how to move the
-// password check into Apps Script if this ever needs to be real.
+// A browser-side convenience, not a security boundary - APPS_SCRIPT_TOKEN is what actually protects the sheet. See SETUP.txt section 7.
 
 import { OWNER_PASSWORD, OWNER_NAME, SESSION_DAYS } from "../config.js";
 import { isConfigured } from "./writer.js";
@@ -38,9 +32,7 @@ export function signIn(password) {
   return { ok: true };
 }
 
-// Two failure modes, answered differently on purpose:
-//   not_configured - nobody can write; the UI should stop offering it
-//   auth_required  - the right person could; the UI should ask who this is
+// not_configured: nobody can write, so stop offering it. auth_required: the right person could, so ask who this is.
 export function status() {
   return {
     owner: isOwner(),

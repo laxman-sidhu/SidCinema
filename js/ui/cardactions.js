@@ -1,21 +1,4 @@
-// Every write you can start from a card, behind one three-dot button.
-//
-// Four icons sat on every poster before this. They competed with the art, gave
-// no action a name, and on a phone four 33px targets in a row left no margin for
-// error. One menu keeps the grid quiet and labels each action in words.
-//
-// The menu itself is NOT inside the card. Both .card and .card__poster are
-// overflow:hidden - the poster needs it for its rounded corners - so a dropdown
-// rendered in place is clipped to nothing and the button looks broken. It lives
-// in one fixed-position layer on <body> instead, positioned against the button
-// that opened it.
-//
-// Optimistic, with a snapshot. A click repaints immediately and calls the bridge
-// after, because Apps Script takes seconds and a dead-looking control gets
-// pressed twice. Every handler snapshots the flags first and restores them
-// exactly if the write fails - approximately is not good enough, because "undo
-// the favourite" and "undo everything" look identical on screen but differ in
-// the sheet.
+// Every write you can start from a card. The menu lives on <body> because .card is overflow:hidden, and each click repaints optimistically from a snapshot restored exactly on failure.
 
 import { esc } from "../core/util.js";
 import * as toast from "./toast.js";
@@ -23,8 +6,7 @@ import * as actions from "./actions.js";
 
 const ICONS = {
   watched: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4.5 12.5 5 5 10-11"/></svg>',
-  // A bookmark, outlined when off and solid when on - the same glyph either way,
-  // so only the fill changes and the row never shifts.
+  // The same glyph either way, so only the fill changes and the row never shifts.
   watchlist: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12a.5.5 0 0 1 .5.5v16.2a.3.3 0 0 1-.47.25L12 16.4l-6.03 4.05a.3.3 0 0 1-.47-.25V4a.5.5 0 0 1 .5-.5Z"/></svg>',
   favorite: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-9.3A3.7 3.7 0 0 1 12 8a3.7 3.7 0 0 1 7 2.7C19 15.6 12 20 12 20z"/></svg>',
   must: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 4 2.4 5 5.6.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.6-.8z"/></svg>'
@@ -33,9 +15,7 @@ const ICONS = {
 const BOOKMARK = '<svg viewBox="0 0 24 24" aria-hidden="true">'
   + '<path d="M6 3.5h12a.5.5 0 0 1 .5.5v16.2a.3.3 0 0 1-.47.25L12 16.4l-6.03 4.05a.3.3 0 0 1-.47-.25V4a.5.5 0 0 1 .5-.5Z"/></svg>';
 
-// The corner tag. Watched wins over queued, because a watched title is not on
-// the watchlist at all - the two are mutually exclusive by construction, and
-// this only decides what happens in the frame between a click and its write.
+// Watched wins over queued: the two are mutually exclusive, so this only decides the frame between a click and its write.
 export function badgeMarkup(item) {
   if (item && item.watched === true) {
     return '<span class="card__badge">'
@@ -51,12 +31,7 @@ export function badgeMarkup(item) {
 const DOTS = '<svg viewBox="0 0 24 24" aria-hidden="true">'
   + '<circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>';
 
-// Which toggles a card shows follows what the sheet can record.
-//
-// Favourite and Must watch are columns on an All Watched row, so they need the
-// row to exist. Watchlisting something already seen is a contradiction, so that
-// one is the other way round. The watched tick is always last, in the same place
-// on every card, so the eye learns one position.
+// Which toggles a card shows follows what the sheet can record; the watched tick is always last, in the same place on every card.
 export function barFor(item) {
   const watched = item.watched === true;
   const rows = [];
@@ -94,16 +69,13 @@ export function barMarkup(item) {
 
 export function repaint(card, item) {
 
-  // The bar carries the flag state, so it is rebuilt too or a heart filled from
-  // the card would not stay filled.
+  // The bar carries the flag state, so it is rebuilt too or a heart filled from the card would not stay filled.
   const bar = card.querySelector("[data-bar]");
   if (bar) bar.outerHTML = barMarkup(item);
   card.classList.toggle("is-watched", item.watched === true);
   card.classList.toggle("is-listed", item.watchlisted === true);
 
-  // One badge, two possible states, so it is rebuilt rather than added and
-  // removed: queueing something has to swap the corner from nothing to
-  // Watchlist, and marking it watched has to swap Watchlist to Watched.
+  // One badge with two possible states, so it is rebuilt rather than added and removed.
   const badge = card.querySelector(".card__badge");
   if (badge) badge.remove();
   const wanted = badgeMarkup(item);
@@ -163,14 +135,12 @@ async function run(action, card, item, options) {
     must_watch: item.must_watch,
     category: item.category,
     watched_source: item.watched_source,
-    // Which row in the sheet this card stands for. Restored with the rest on a
-    // failure, or the next click would write to a row that was never created.
+    // Which row in the sheet this card stands for, restored on failure or the next click writes to a row that was never created.
     sheet_id: item.sheet_id,
     watchlist_id: item.watchlist_id
   };
 
-  // The toast carries the story from here. Nothing else on the card is disabled,
-  // so a second title can be added while this one saves.
+  // The toast carries the story; nothing else on the card is disabled, so a second title can be added while this one saves.
   card.classList.add("is-saving");
   const pressed = card.querySelector(`.cardbar__btn--${action}`);
   if (pressed) pressed.classList.add("is-working");
@@ -188,9 +158,7 @@ async function run(action, card, item, options) {
         await actions.unmarkWatched(item);
         item.sheet_id = null;
       } else {
-        // The only action needing more than a click: industry and genre. Neither
-        // can be guessed - TMDB knows a film's production country, not whether
-        // it belongs under Bollywood or Other Language.
+        // The only action needing more than a click: TMDB knows a production country, not whether a film is Bollywood or Other Language.
         const choices = await actions.askWatchedDetails(item);
         if (!choices) {
           card.classList.remove("is-saving");
@@ -207,8 +175,7 @@ async function run(action, card, item, options) {
         item.industry = choices.industry;
         repaint(card, item);
         const saved = await actions.markWatched(item, choices);
-        // The row that now exists in All Watched, which is what the next flag
-        // write has to address.
+        // The row that now exists in All Watched, which is what the next flag write has to address.
         if (saved && saved.row) item.sheet_id = saved.row.tmdb_id;
         item.watchlist_id = null;
       }
@@ -224,8 +191,7 @@ async function run(action, card, item, options) {
         item.watchlisted = true;
         repaint(card, item);
         const queued = await actions.addToWatchlist(item);
-        // Either the row just appended or the one already there under TMDB's
-        // other id for this film. Both are the row a later remove must delete.
+        // Either the row just appended or the one already there under TMDB's other id for this film.
         if (queued && queued.row) item.watchlist_id = queued.row.tmdb_id;
       }
     } else if (action === "favorite") {
@@ -252,8 +218,7 @@ async function run(action, card, item, options) {
     else toast.error(message);
   } finally {
     card.classList.remove("is-saving");
-    // repaint() replaced the button, so re-find it rather than reusing a handle
-    // that is now detached from the document.
+    // repaint() replaced the button, so re-find it rather than reusing a handle that is now detached.
     const again = card.querySelector(`.cardbar__btn--${action}`);
     if (again) again.classList.remove("is-working");
   }

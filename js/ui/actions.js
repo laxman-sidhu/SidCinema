@@ -25,10 +25,7 @@ export function ownerName() {
   return auth.status().owner_name || "the owner";
 }
 
-// A Bootstrap modal traps focus inside itself. With the detail modal open behind
-// a dialog of ours, the password field could be clicked but not typed into,
-// which looks stale rather than blocked. Focus is set after the hide transition,
-// not during it.
+// A Bootstrap modal traps focus, so focus is set after the hide transition rather than during it.
 function closeAnyModal() {
   document.querySelectorAll(".modal.show").forEach(node => {
     const instance = window.bootstrap && window.bootstrap.Modal
@@ -38,10 +35,7 @@ function closeAnyModal() {
   });
 }
 
-// --- the gate ---------------------------------------------------------------
-//
-// A bare password prompt on someone else's site reads as a wall. The sentence
-// reads as an answer, so the password field only appears after Yes.
+// --- the gate: a bare password prompt reads as a wall, so the field only appears after Yes ---
 
 function buildGate() {
   if (gate) return gate;
@@ -169,11 +163,7 @@ export function withOwner(job) {
   openGate();
 }
 
-// --- the "which shelf?" dialog ---------------------------------------------
-//
-// A row needs an Industry and a Genre and neither can be guessed. Both lists
-// come from the sheet's own contents, plus "+ Add new...", so an industry typed
-// in by hand appears here without any code change.
+// --- the "which shelf?" dialog: Industry then Genre, both from the sheet's own contents, plus "+ Add new..." ---
 
 const NEW_VALUE = "__new__";
 
@@ -266,18 +256,14 @@ export function askWatchedDetails(item) {
     fillSelect(industry, options.industries,
       isSeries && seriesLabel ? seriesLabel : (item.category || ""));
 
-    // Industry first, then genre. The genre list is rebuilt from the rows that
-    // already sit under the chosen industry, so picking Hollywood offers the
-    // genres Hollywood rows actually use rather than all forty in the sheet.
-    // "+ Add new..." is always last, so nothing is unreachable.
+    // Industry first, then genre, rebuilt from the rows under the chosen industry. "+ Add new..." is always last.
     function refillGenres() {
       const chosenIndustry = industry.value === NEW_VALUE
         ? industryNew.value.trim()
         : industry.value;
 
       const scoped = watched.genres(chosenIndustry);
-      // A brand new industry has no rows yet, so scoping would leave the list
-      // empty. Fall back to every genre rather than offering nothing.
+      // A brand new industry has no rows yet, so fall back to every genre rather than offering nothing.
       const entries = scoped.length ? scoped : watched.genres();
 
       const preferred = (item.genres || []).find(g => entries.some(e => e.label === g))
@@ -357,18 +343,10 @@ export function askWatchedDetails(item) {
   });
 }
 
-// --- the four actions -------------------------------------------------------
-// Each takes the card's own data, so no TMDB round trip is needed: the poster,
-// year and original title are already on screen.
+// --- the four actions, each taking the card's own data, so no TMDB round trip is needed ---
 
 function rowFor(item, extra) {
-  // Both Name and Original Title get TMDB's ENGLISH title.
-  //
-  // TMDB's original_title field is the title in the film's own script, so a Hindi
-  // film wrote "\u0938\u092a\u0942\u0924" into the sheet where "Sapoot" was wanted. That column is
-  // read back for title matching and typed into by hand, and neither works in a
-  // script the owner does not type in. The native title is not lost - the detail
-  // modal shows it live from TMDB whenever it differs.
+  // Both Name and Original Title get TMDB's ENGLISH title: original_title is the film's own script, which the sheet is neither read nor typed in.
   const english = item.title || item.original_title || "";
   return {
     tmdb_id: item.id,
@@ -384,13 +362,7 @@ function rowFor(item, extra) {
   };
 }
 
-// What to send the bridge so it finds the right row.
-//
-// sheet_id / watchlist_id are set by annotate() and hold the id of the row that
-// is ACTUALLY in the sheet, which is not always the id on the card: TMDB holds
-// some films twice, so a card can be id 913544 while the row says 1037690.
-// Sending the card's id would ask the bridge to edit a row that is not there.
-// Name and year ride along as the fallback the bridge uses when the id misses.
+// sheet_id / watchlist_id hold the id of the row ACTUALLY in the sheet; name and year ride along as the bridge's fallback.
 function targetFor(item, sheetIdField) {
   const rowId = item[sheetIdField];
   const english = item.title || item.original_title || "";
@@ -423,19 +395,13 @@ export function setFlag(item, flag, value) {
 }
 
 export async function addToWatchlist(item) {
-  // The Genre column is written on the way in or not at all: the watchlist page
-  // groups by it, and nothing later fills a blank one in. Cards from a list
-  // endpoint already carry their genres; the ones that do not cost one call
-  // here rather than a hand edit in the sheet afterwards.
+  // The Genre column is written on the way in or not at all - the watchlist page groups by it and nothing fills a blank one later.
   const genre = (item.genres && item.genres[0])
     || item.genre
     || await firstGenre(item.id, item.media_type);
 
   return writer.addWatchlist(rowFor(item, {
-    // A queued series has to say so. Industry is the only thing in the sheet
-    // that records whether a row is a film or a series, and a TMDB result
-    // carries no industry to copy - so every series queued from search used to
-    // land with a blank cell and read back as a film.
+    // A queued series has to say so: Industry is the only thing recording film-versus-series, and a TMDB result carries none.
     industry: item.category
       || (item.media_type === "tv" ? SERIES_INDUSTRY : ""),
     genre
@@ -446,8 +412,7 @@ export function removeFromWatchlist(item) {
   return writer.removeWatchlist(targetFor(item, "watchlist_id"));
 }
 
-// Reflect the current session on <body> so CSS can hide owner-only affordances
-// without every component asking.
+// Reflect the session on <body> so CSS can hide owner-only affordances without every component asking.
 export function paintOwnerState() {
   document.body.classList.toggle("is-owner", isOwner());
   document.body.classList.toggle("no-writes", !canWrite());

@@ -1,5 +1,4 @@
-// The search page. Everything on screen is driven from here; the modules below
-// it know nothing about the DOM.
+// The search page. Everything on screen is driven from here; the modules below know nothing about the DOM.
 
 import { esc, debounce } from "../core/util.js";
 import { MAX_BROWSE_PAGE, TMDB_PAGE_SIZE, BROWSE_PAGES } from "../config.js";
@@ -139,10 +138,7 @@ function paintResults() {
   dom.loadMoreRow.hidden = !state.hasMore;
 }
 
-// The one thing worth saying above a result set: these are not quite the words
-// you typed. Which rung of the correction ladder found the better spelling, how
-// long the search took and which parser read it were all facts about the
-// machinery, not about the films - so they are gone.
+// The one thing worth saying above a result set: these are not quite the words you typed.
 function paintMeta(payload) {
   if (!payload.corrected) {
     dom.resultsCorrected.hidden = true;
@@ -167,9 +163,7 @@ function paintScopeUI() {
     + examples.map(([full, label]) =>
       `<button type="button" class="chip" data-query="${esc(full)}">${esc(label)}</button>`).join("");
 
-  // Autocomplete is only offered under Person, because the People tab is the
-  // only local list the app holds. Offering completions for titles would promise
-  // a catalogue that is not here.
+  // Autocomplete is only offered under Person - the People tab is the only local list the app holds.
   if (state.scope !== scope.PERSON) hideSuggestions();
 }
 
@@ -266,12 +260,7 @@ function panelIsOpen() {
 }
 
 async function openPanel() {
-  // The panel sits at translateX(-100%) and only .is-open slides it in, so
-  // clearing `hidden` alone leaves it fully rendered just off the left edge -
-  // present in the DOM, invisible on screen. Both are required.
-  //
-  // [hidden] is display:none, and a transition cannot run from display:none, so
-  // the class has to land on a later frame than the unhide.
+  // Both are required: [hidden] is display:none and a transition cannot run from it, so .is-open has to land a frame later.
   dom.filterPanel.hidden = false;
   dom.scrim.hidden = false;
   requestAnimationFrame(() => {
@@ -310,8 +299,7 @@ function closePanel() {
   dom.filterToggle.setAttribute("aria-expanded", "false");
   document.body.classList.remove("panel-open");
 
-  // Hide only after the slide finishes, or it vanishes instead of sliding out.
-  // 280ms matches the transform transition on .panel.
+  // Hide only after the slide finishes; 280ms matches the transform transition on .panel.
   window.setTimeout(() => {
     if (!panelIsOpen()) {
       dom.filterPanel.hidden = true;
@@ -330,8 +318,7 @@ function readPanel() {
 
 function paintActiveFilters() {
   const entries = Object.entries(state.selection);
-  // A non-default sort is a filter now, so it counts on the badge. "Most
-  // popular" does not, because that is what the catalogue does unasked.
+  // A non-default sort is a filter and counts on the badge. "Most popular" does not - that is what the catalogue does unasked.
   const count = entries.filter(([key, value]) =>
     key !== "sort" || (value && value !== "popularity")).length;
 
@@ -412,10 +399,7 @@ function setMedia(value) {
   return loadHome();
 }
 
-// --- the card data behind an element ---------------------------------------
-//
-// Handed to CardActions so it mutates the page's OWN object, which is what makes
-// a change survive the next re-render instead of reverting.
+// --- the card data behind an element: the page's OWN object, so a change survives the next re-render ---
 
 // Did the live read disagree with the snapshot about anything on screen?
 function changedFlags(before, after) {
@@ -535,9 +519,7 @@ function wire() {
   });
 }
 
-// Returns the line the toast settles to; throwing is how it reports a failure.
-// The spinner, the tick and the toast itself belong to wireRefresh, so every
-// page reports a reload the same way.
+// Returns the line the toast settles to; throwing is how it reports a failure. wireRefresh owns the spinner and the toast.
 async function reload() {
   const { invalidate } = await import("../data/sheets.js");
   invalidate();
@@ -570,22 +552,17 @@ export async function start() {
   wire();
   actions.paintOwnerState();
 
-  // The last known sheet, straight from localStorage and synchronous, so the
-  // watched flags are already in the index before the first grid paints. Without
-  // this the posters appear and turn green a second later, when the Apps Script
-  // read lands - which reads as the page correcting itself.
+  // The last known sheet, synchronous, so the watched flags are in the index before the first grid paints.
   watched.hydrate();
   watchlist.hydrate();
   people.hydrate();
 
-  // The live read runs alongside the feed and replaces the snapshot when it
-  // arrives. A grid that paints early beats a blank page waiting for both.
+  // The live read runs alongside the feed and replaces the snapshot when it arrives.
   const sheets = Promise.all([watched.load(), watchlist.load(), people.load()]);
   await loadHome();
 
   await sheets;
-  // Re-annotate only if the live read actually changed something. Repainting an
-  // identical grid is a wasted frame the user sees as a flicker.
+  // Re-annotate only if the live read actually changed something: repainting an identical grid is a flicker.
   const refreshed = annotate(state.items);
   if (changedFlags(state.items, refreshed)) {
     state.items = refreshed;

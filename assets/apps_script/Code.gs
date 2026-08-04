@@ -1,43 +1,6 @@
-/**
- * SidCinema - the read and write bridge.
- *
- * Paste this into Extensions > Apps Script on the workbook, set SECRET below,
- * then deploy as a web app. Full instructions in SETUP.txt.
- *
- * WHAT THIS IS FOR
- * The site is static HTML, CSS and JS with no server of its own. This script is
- * the only thing that touches the spreadsheet. It lives inside the workbook and
- * runs as its owner, so it can read and edit without any Google credential ever
- * leaving Google.
- *
- * Reading through doGet rather than the published CSV is deliberate. A published
- * CSV is cached by Google for minutes, so a write was invisible until the cache
- * expired; this reads the live sheet, so a change is there on the next load.
- *
- * SECURITY
- * The deployment has to be readable by "Anyone" for the site to reach it, so the
- * URL is effectively public and SECRET is the only thing between a stranger and
- * your spreadsheet. Treat it like a password. Changing it here and redeploying
- * revokes access instantly. Google Sheets keeps full version history, so
- * File > Version history restores anything lost.
- *
- * A ROW IS FOUND BY IDENTITY, NOT BY TMDB ID ALONE.
- * TMDB holds some films twice - "Ved" (2022) is 1037690 and 913544, same film,
- * same poster - so an id-only check said "not here" about a row that was, and
- * appended a second one. Every lookup here tries the id first and then the name
- * and year together. Title alone is never enough: two different films called
- * "The Call" are two rows, and only the year tells them apart.
- *
- * COLUMNS ARE FOUND BY HEADER NAME, NEVER BY POSITION.
- * All Watched has an unnamed spacer column and columns get moved by hand.
- * Writing to "column 9" would corrupt data the first time something shifted,
- * silently. Writing to "the column whose header says Must Watch" survives any
- * rearrangement and fails loudly if the header is gone.
- */
+// SidCinema - the read and write bridge. Paste into Extensions > Apps Script, set SECRET, deploy as a web app; SETUP.txt has the rest.
 
-// ============================================================================
-// SETTINGS
-// ============================================================================
+// === SETTINGS ===
 
 /** Must match APPS_SCRIPT_TOKEN in js/config.js. Change both together. */
 var SECRET = 'THIS-IS-A-LONG-RANDOM-STRING-FOR-APPS-SCRIPT-TOKEN';
@@ -50,11 +13,7 @@ var PEOPLE_SHEET = 'People';
 /** What gets written into Must Watch and Favorites when they are ticked. */
 var FLAG_YES = 'Yes';
 
-/**
- * Header text -> the field the site sends. Compared lowercased and with
- * whitespace collapsed, so "Tmdb Id", "TMDB ID" and " tmdb id " all match.
- * Add spellings here if a header is ever renamed.
- */
+// Header text -> the field the site sends, compared lowercased with whitespace collapsed. Add spellings here if a header is renamed.
 var COLUMN_ALIASES = {
   name:       ['name', 'title', 'movie', 'movie name', 'show', 'show name'],
   year:       ['year', 'release year'],
@@ -67,18 +26,9 @@ var COLUMN_ALIASES = {
   favorite:   ['favorites', 'favourites', 'favorite', 'favourite', 'liked', 'like', 'loved']
 };
 
-// ============================================================================
-// ENTRY POINTS
-// ============================================================================
+// === ENTRY POINTS ===
 
-/**
- * Reading. No token required: the same rows are readable through the published
- * CSV anyway, so demanding one here would protect nothing and would put the
- * secret into every page load.
- *
- * One request returns all three tabs. Three separate calls would each pay this
- * script's cold start, which is the slowest part of a first page load.
- */
+// Reading. No token: the same rows are readable through the published CSV anyway. One request returns all three tabs, so a first load pays the cold start once.
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'read';
 
@@ -136,15 +86,9 @@ function reply(payload) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// ============================================================================
-// READING
-// ============================================================================
+// === READING ===
 
-/**
- * One tab as a header row plus data rows. Values are stringified here rather
- * than in the browser, because a year read as a number and a year read as text
- * are different keys once they reach a lookup.
- */
+// One tab as a header row plus data rows. Values are stringified here, because a year read as a number and one read as text are different keys in a lookup.
 function readTab(name) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
   if (!sheet) return { header: [], rows: [] };
@@ -155,9 +99,7 @@ function readTab(name) {
   return { header: values[0], rows: values.slice(1) };
 }
 
-// ============================================================================
-// SHEET HELPERS
-// ============================================================================
+// === SHEET HELPERS ===
 
 function normaliseHeader(text) {
   return String(text == null ? '' : text)
@@ -207,15 +149,7 @@ function toId(value) {
   return match ? parseInt(match[0], 10) : null;
 }
 
-/**
- * Lowercase, unaccented, punctuation-free, single-spaced - the same shape
- * js/core/util.js produces, so the two sides agree on what "the same title"
- * looks like.
- *
- * \p{L} needs the u flag and a V8 runtime. Built with new RegExp so an old
- * Rhino deployment falls back to ASCII rather than refusing to parse the file
- * at all - which would take every write down, not just this one.
- */
+// The same normalisation js/core/util.js produces, so both sides agree what "the same title" is. Built with new RegExp so an old Rhino runtime falls back to ASCII rather than failing to parse.
 var TITLE_STRIP = (function () {
   try { return new RegExp('[^\\p{L}\\p{N}\\s]', 'gu'); }
   catch (e) { return /[^a-z0-9\s]/g; }
@@ -234,14 +168,7 @@ function toYear(value) {
   return match ? match[0] : '';
 }
 
-/**
- * Every 1-based row this title occupies, newest last. Matched on the id, or on
- * the name and the year together.
- *
- * A blank year on either side falls back to the title alone, because a row with
- * no year has nothing else to be matched on. Rows that DO carry a year are
- * never matched across years.
- */
+// Every 1-based row this title occupies, newest last, matched on the id or on name AND year. A blank year falls back to the title alone.
 function findRowsByIdentity(sheet, map, payload) {
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
@@ -300,10 +227,7 @@ function deleteRows(sheet, rows) {
   return sorted.length;
 }
 
-/**
- * Append one row, writing each field into the column its header names. Cells
- * whose header is absent are simply skipped, including the unnamed spacer.
- */
+// Append one row, writing each field into the column its header names. Cells whose header is absent are skipped, including the unnamed spacer.
 function appendRow(sheet, map, fields) {
   var width = Math.max(sheet.getLastColumn(), 1);
   var row = new Array(width);
@@ -318,9 +242,7 @@ function appendRow(sheet, map, fields) {
   return sheet.getLastRow();
 }
 
-// ============================================================================
-// ACTIONS
-// ============================================================================
+// === ACTIONS ===
 
 function ping() {
   var watched = getSheet(WATCHED_SHEET);
@@ -341,10 +263,7 @@ function ping() {
   };
 }
 
-/**
- * Append to All Watched and delete from Watchlist in ONE call. Two calls can
- * half-fail and leave a title sitting in both lists.
- */
+// Append to All Watched and delete from Watchlist in ONE call: two calls can half-fail and leave a title in both lists.
 function addWatched(payload) {
   var sheet = getSheet(WATCHED_SHEET);
   var map = columnMap(sheet);
@@ -356,8 +275,7 @@ function addWatched(payload) {
 
   var existing = findRowByIdentity(sheet, map, payload);
   if (existing) {
-    // Already watched, under this id or TMDB's other one for the same film.
-    // Apply the flags rather than adding a duplicate row.
+    // Already watched under this id or TMDB's other one for the same film, so apply the flags rather than adding a duplicate row.
     var applied = setFlags({
       tmdb_id: tmdbId,
       name: payload.name,
@@ -397,16 +315,12 @@ function removeWatched(payload) {
 
   if (!rows.length) return { ok: true, removed: false };
 
-  // Every row for this title, so a re-watch logged twice does not leave half of
-  // itself behind and the card come back green on the next load.
+  // Every row for this title, so a re-watch logged twice does not leave half of itself behind and come back green on the next load.
   var removed = deleteRows(sheet, rows);
   return { ok: true, removed: true, rows_removed: removed };
 }
 
-/**
- * Must Watch and Favorites. Only the flags actually named are touched, so
- * liking something never disturbs its must-watch state.
- */
+// Must Watch and Favorites. Only the flags actually named are touched, so liking something never disturbs its must-watch state.
 function setFlags(payload) {
   var sheet = getSheet(WATCHED_SHEET);
   var map = columnMap(sheet);
@@ -440,8 +354,7 @@ function addWatchlist(payload) {
   var tmdbId = toId(payload.tmdb_id);
   if (tmdbId === null) return { ok: false, error: 'That title has no TMDB id.' };
 
-  // By identity, not by id. This is the check that stops a second row for a
-  // film TMDB happens to hold twice.
+  // By identity, not by id: this is the check that stops a second row for a film TMDB happens to hold twice.
   if (findRowByIdentity(sheet, map, payload)) {
     return { ok: true, already_listed: true };
   }
@@ -464,13 +377,7 @@ function removeWatchlist(payload) {
   return { ok: true, removed: removed > 0, rows_removed: removed };
 }
 
-/**
- * Every queued row for this title, not just the first. Duplicates that predate
- * the identity check have to leave together, or removing one leaves the other
- * in the queue and the card comes straight back.
- *
- * Takes the whole payload, or a bare id.
- */
+// Every queued row for this title, not just the first, or removing one leaves the other in the queue. Takes the whole payload, or a bare id.
 function removeFromWatchlist(payload) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(WATCHLIST_SHEET);
   if (!sheet) return 0;
@@ -483,19 +390,9 @@ function removeFromWatchlist(payload) {
   return deleteRows(sheet, rows);
 }
 
-// ============================================================================
-// SETUP CHECK
-// ============================================================================
+// === SETUP CHECK ===
 
-/**
- * A one-off tidy of the Watchlist tab, for duplicates that predate the identity
- * check. Select it in the toolbar and press Run.
- *
- * Removes two things: a second row for a film already queued, and a row for
- * something already in All Watched. Nothing else is touched, and the first row
- * of each title is always the one kept. Google Sheets keeps full version
- * history, so File > Version history undoes this if it takes something wanted.
- */
+// A one-off tidy of the Watchlist tab for duplicates that predate the identity check: select it in the toolbar and press Run. Keeps the first row of each title; File > Version history undoes it.
 function cleanWatchlist() {
   var sheet = getSheet(WATCHLIST_SHEET);
   var map = columnMap(sheet);
@@ -566,11 +463,7 @@ function cleanWatchlist() {
   Logger.log(Math.max(sheet.getLastRow() - 1, 0) + ' rows left on the watchlist.');
 }
 
-/**
- * Select this function in the Apps Script toolbar and press Run. It reports
- * what it found without changing anything, so a broken setup can be diagnosed
- * before the site is pointed at it.
- */
+// Select this in the Apps Script toolbar and press Run. It reports what it found without changing anything, so a broken setup can be diagnosed before the site is pointed at it.
 function testSetup() {
   var report = ping();
   Logger.log('Watched rows:    ' + report.bridge.watched_rows);

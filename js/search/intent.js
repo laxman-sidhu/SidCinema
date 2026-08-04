@@ -1,6 +1,4 @@
-// Turns a phrase into a TMDB intent with no network at all. Two jobs:
-// the scoped parsers (Title and Person go straight through here, which is what
-// makes those searches free), and the fallback whenever Gemini is unavailable.
+// Phrase to intent with no network: the scoped parsers (Title, Person) and the fallback whenever Gemini is unavailable.
 
 import * as scope from "./scope.js";
 
@@ -82,13 +80,10 @@ const FRAMING_PATTERN = /^(?:please\s+)?(?:can you\s+|could you\s+)?(?:show me|s
 // A trailing format noun is framing too - "The Call movie" is still The Call.
 const FORMAT_TAIL = /\s*\b(?:the\s+)?(?:movies?|films?|web\s?series|tv\s?series|tv\s?shows?|series|shows?|seasons?|episodes?|tv)\b\s*$/i;
 
-// Everything left after stripping the tail must still be a plausible title.
-// "The Movie" would otherwise be cut down to "The".
+// What is left after stripping the tail must still be a plausible title, or "The Movie" becomes "The".
 const BARE_ARTICLES = new Set(["the", "a", "an", "of", "my", "our", "it", "is"]);
 
-// Where one name ends and the next begins. "with" is here as well as in the
-// stopword list, because it separates before it is filler: "movies with akshay
-// kumar and suniel shetty" has to split on the "and", not lose it.
+// "with" separates before it is filler: "movies with akshay kumar and suniel shetty" splits on the "and".
 const PEOPLE_SPLIT = /\s*(?:,|&|\+|\band\b|\bwith\b|\bft\.?\b|\bfeaturing\b|\balong\s+with\b)\s*/i;
 
 const SIMILAR_PATTERN = /\b(?:like|similar to|same as|in the style of)\s+(.+)$/i;
@@ -117,10 +112,7 @@ export function detectMedia(query, hint) {
   return cleanMediaValue(hint) || MOVIE;
 }
 
-// Everything a phrase says about WHAT KIND of title is wanted: genre, language,
-// studio, theme, era, ordering. Separate from the parsers so the scoped ones can
-// reuse it - "Akshay Kumar comedy movies" under Person still needs the Comedy,
-// it just must not lose the name to the residue.
+// Everything a phrase says about WHAT KIND of title is wanted, kept separate so the scoped parsers can reuse it.
 export function extractFilters(text, media) {
   const lowered = String(text || "").toLowerCase();
   const found = {};
@@ -189,8 +181,7 @@ export function extractFilters(text, media) {
   return { filters: found, isAwardQuery };
 }
 
-// What is left once every filter word, format word and pleasantry is removed.
-// Whatever survives is the subject: usually a name.
+// What is left once every filter word, format word and pleasantry is removed: usually a name.
 export function residue(text) {
   let out = String(text || "");
   const consumed = [
@@ -208,12 +199,7 @@ export function residue(text) {
   return out.replace(/\s+/g, " ").trim();
 }
 
-// The title inside a phrase, with the title's own words left alone.
-//
-// This is the whole reason "The Call" used to fail. The general parser strips
-// stopwords, and "the" is a stopword, so the search that ran was for "call" -
-// which TMDB happily answers with something else. Under the Title scope nothing
-// is stripped except framing the user added themselves.
+// The title inside a phrase, with the title's own words left alone - "the" is a stopword, which is why "The Call" searched for "call".
 export function titlePhrase(query) {
   const text = String(query || "").trim().replace(/\s+/g, " ");
   if (!text) return "";
@@ -232,8 +218,7 @@ export function titlePhrase(query) {
   return stripped || text;
 }
 
-// The name inside a phrase. The opposite problem to a title: here the filler
-// genuinely is filler, so the residue pass is exactly right.
+// The name inside a phrase. Unlike a title, here the filler genuinely is filler.
 export function personPhrase(query) {
   const text = String(query || "").trim().replace(/\s+/g, " ");
   if (!text) return "";
@@ -241,9 +226,7 @@ export function personPhrase(query) {
   const left = residue(text);
   if (left) return left;
 
-  // Everything looked like filler, which usually means the name itself is a
-  // word the stripper knows. Fall back to framing-only removal rather than
-  // searching for nothing.
+  // Everything looked like filler, so the name is a word the stripper knows: fall back to framing-only removal.
   let lighter = text.replace(FRAMING_PATTERN, "").trim();
   for (let pass = 0; pass < 2; pass++) {
     const candidate = lighter.replace(FORMAT_TAIL, "").trim();
@@ -253,16 +236,7 @@ export function personPhrase(query) {
   return lighter || text;
 }
 
-// Two or more names in one phrase, or [] if it does not read as a list of them.
-//
-// Offline and deliberately timid. The rules below are what keep "The Good, the
-// Bad and the Ugly" from being read as three actors: every part has to survive
-// the filler stripper AND still hold at least two words, which a real full name
-// does and a fragment of a title does not.
-//
-// It is allowed to be wrong, because it only PROPOSES names. Each one is then
-// looked up strictly, and a part that matches nobody is dropped rather than
-// searched for - so a bad split costs a request, not a wrong page.
+// Two or more names, or []. Deliberately timid - every part must survive the stripper AND hold two words, which is what saves "The Good, the Bad and the Ugly".
 export function splitPeople(query) {
   const text = String(query || "").trim();
   if (!text || SIMILAR_PATTERN.test(text)) return [];
@@ -275,9 +249,7 @@ export function splitPeople(query) {
   for (const part of parts) {
     const name = personPhrase(part).trim();
     if (!name) continue;
-    // A full name, not a leftover word. Single-word names exist - Rajinikanth,
-    // Nayanthara - but accepting one-word parts here would read every list of
-    // nouns as a cast list, and the model handles those phrasings anyway.
+    // A full name, not a leftover word: one-word parts would read every list of nouns as a cast list.
     const words = name.split(/\s+/).filter(Boolean);
     if (words.length < 2 || words.length > 4) continue;
     if (name.length < 5 || /\d/.test(name)) continue;
@@ -318,8 +290,7 @@ export function heuristicParse(query, mediaHint) {
   const { filters, isAwardQuery } = extractFilters(text, media);
   Object.assign(intent, filters);
 
-  // Names first. "akshay kumar and suniel shetty comedy movies" would otherwise
-  // fall through to the line below and be searched for as one long title.
+  // Names first, or "akshay kumar and suniel shetty comedy movies" is searched for as one long title.
   const cast = splitPeople(text);
   if (cast.length > 1) {
     intent.intent = "people_movies";
@@ -329,8 +300,7 @@ export function heuristicParse(query, mediaHint) {
     return intent;
   }
 
-  // Two or more surviving words are probably a person or a title, which TMDB
-  // multi-search resolves.
+  // Two or more surviving words are probably a person or a title, which multi-search resolves.
   const left = residue(text);
   if (left.split(/\s+/).length >= 2 && left.length >= 6 && !isAwardQuery) {
     intent.intent = "search";
@@ -363,8 +333,7 @@ export function heuristicScoped(query, mediaHint, chosenScope) {
       intent.people = cast;
       delete intent.person;
     }
-    // Genre and sort still apply to a filmography; language and company do not,
-    // and would only narrow a credit list TMDB cannot filter.
+    // Genre and sort still apply to a filmography; language and company do not.
     for (const key of ["genre", "genres", "sort", "year", "year_from", "year_to"]) {
       if (key in filters) intent[key] = filters[key];
     }
@@ -388,8 +357,7 @@ export function heuristicScoped(query, mediaHint, chosenScope) {
     return intent;
   }
 
-  // Discover. A name has no meaning here, so anything left over becomes a theme
-  // keyword rather than being handed to a title or person lookup.
+  // Discover: a name has no meaning here, so anything left over becomes a theme keyword.
   Object.assign(intent, filters);
   if (!["genre", "genres", "language", "company", "keywords"].some(key => key in intent)) {
     const left = residue(text);

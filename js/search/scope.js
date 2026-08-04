@@ -1,17 +1,4 @@
-// What the user chose to search BY.
-//
-// Without this, one phrase had to answer two questions at once: what is being
-// looked for, and what kind of thing it is. A wrong guess sent the query to the
-// wrong endpoint - "The Call" went to /search/person because someone on TMDB is
-// surnamed Call, and the film was never looked up at all.
-//
-//   title    -> /search/{movie|tv}    the phrase IS a title
-//   person   -> /search/person        the phrase IS a name
-//   discover -> /discover/{movie|tv}  the phrase describes a kind of title
-//   auto     -> whatever the phrase looks like
-//
-// This module holds no logic beyond the vocabulary. Labels, placeholders and
-// example chips all come from here, so adding a scope is a change in one file.
+// The "Search by" vocabulary: title, person, discover, auto. Without it one phrase had to say both what is wanted and what kind of thing it is.
 
 export const AUTO = "auto";
 export const TITLE = "title";
@@ -32,9 +19,7 @@ export function clean(value) {
   return ALIASES[String(value == null ? "" : value).trim().toLowerCase()] || AUTO;
 }
 
-// Scopes where the phrase IS the search term, so TMDB can be asked directly
-// without anything having to interpret it first. Discover and Auto are not here:
-// "best korean thrillers of the 90s" is not a title.
+// Scopes where the phrase IS the search term, so TMDB can be asked directly with nothing interpreting it first.
 export const TERM_SCOPES = [TITLE, PERSON];
 
 const DEFINITIONS = [

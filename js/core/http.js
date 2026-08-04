@@ -56,8 +56,7 @@ async function readError(response) {
   }
 }
 
-// Apps Script cannot answer a CORS preflight, and text/plain is the one JSON
-// carrier that never triggers one. The script parses the body itself.
+// Apps Script cannot answer a CORS preflight, and text/plain is the one JSON carrier that never triggers one.
 export async function postPlain(url, payload, { timeout = 30000 } = {}) {
   const guard = timeoutSignal(timeout);
   try {

@@ -217,6 +217,47 @@ await t("genres scope to the chosen industry", async () => {
   assert.deepEqual(watched.genres("Web Series").map(e => e.label), ["Mystery"]);
 });
 
+// The gap between the sheet's row count and the page's title count is the
+// de-duplicator doing its job, and it used to be silent: a category one short
+// with nothing anywhere naming the row that went. stats() reports it now.
+await t("stats names every row the de-duplicator collapsed", async () => {
+  await watched.load();
+  const stats = watched.stats();
+
+  // The fixture holds "3 Idiots" twice, so five rows are four titles.
+  assert.equal(stats.total_rows, 5);
+  assert.equal(stats.distinct, 4);
+  assert.equal(stats.movies + stats.series, stats.distinct);
+  assert.equal(stats.duplicates.length, stats.total_rows - stats.distinct,
+    "every missing title must be accounted for by a collapse");
+
+  const [collapse] = stats.duplicates;
+  assert.equal(collapse.dropped.name, "3 Idiots");
+  assert.equal(collapse.kept.name, "3 Idiots");
+  assert.equal(collapse.dropped.industry, "Bollywood");
+  // The key IS the diagnosis: a shared id and a shared title+year are
+  // different mistakes in the sheet and get different sentences.
+  assert.equal(collapse.key, "id:20453");
+  assert.match(collapse.reason, /20453/);
+});
+
+await t("a title+year collapse is reported as one, not as an id clash", async () => {
+  await watched.load();
+  // Two rows, two DIFFERENT ids, same title and year - the "Ved" shape, which
+  // is the case the id alone cannot see.
+  watched.install([...watched.rows, {
+    name: "The Call", year: 2020, genre: "Thriller", poster: "p1", tmdb_id: 999001,
+    og_title: "The Call", industry: "Hollywood", must_watch: false, favorite: false,
+    media: "movie", media_hint: "movie"
+  }]);
+  const collapse = watched.stats().duplicates.find(entry => entry.key.startsWith("t:"));
+  assert.ok(collapse, "a second row for the same film under another id was not reported");
+  assert.equal(collapse.key, "t:the call|2020");
+  assert.equal(collapse.dropped.tmdb_id, 999001);
+  assert.equal(collapse.kept.tmdb_id, 618344);
+  await watched.load();
+});
+
 await t("an unknown industry scopes to nothing, so the caller can fall back", async () => {
   await watched.load();
   assert.deepEqual(watched.genres("Nollywood"), []);

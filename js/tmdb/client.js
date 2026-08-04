@@ -71,8 +71,7 @@ export async function get(path, params) {
     );
   }
 
-  // An empty result set is a real answer, but not one worth remembering for
-  // six hours - a title added to TMDB tomorrow should be findable tomorrow.
+  // An empty result set is a real answer, but not one worth remembering for six hours.
   const worthCaching = !(payload && Array.isArray(payload.results) && payload.results.length === 0);
   if (worthCaching) cache.set(key, payload, TMDB_TTL_MS);
   return payload;
@@ -195,8 +194,7 @@ export function languageLabel(code) {
   return String(code).toUpperCase();
 }
 
-// Regional catalogues carry far fewer votes, so the vote floors that keep a
-// single 10/10 from outranking a classic have to be lower for them.
+// Regional catalogues carry far fewer votes, so their vote floors have to be lower.
 export function isRegional(language) {
   if (!language) return false;
   const code = LANGUAGE_CODES[String(language).toLowerCase()] || String(language).slice(0, 2);
@@ -256,8 +254,7 @@ export async function normaliseItem(raw, media = MOVIE) {
   const languageCode = raw.original_language || "";
   const date = (isTv ? raw.first_air_date : raw.release_date) || "";
 
-  // Billing order is the best signal for lead vs cameo, so it has to survive
-  // normalisation. 0 is valid and must not be lost to a falsy check.
+  // Billing order is the best lead-vs-cameo signal, so 0 is valid and must not be lost to a falsy check.
   const order = typeof raw.order === "number" ? raw.order : null;
   const creditType = order !== null ? "cast" : (raw.job || raw.department ? "crew" : null);
 
@@ -293,9 +290,7 @@ export async function pack(rawList, media) {
   return dropJunk(dedupe(items));
 }
 
-// One title can appear several times in a filmography: an actor credited both
-// as a character and as "Himself", or someone who directed and also appeared.
-// Keep the best billing and any directing job rather than whichever came first.
+// One title can appear twice in a filmography, so keep the best billing and any directing job rather than whichever came first.
 function mergeCredits(kept, other) {
   const keptOrder = kept.order;
   const otherOrder = other.order;
@@ -358,14 +353,7 @@ export function nameScore(query, name) {
   }
   if (right.includes(left) || left.includes(right)) return 0.7;
 
-  // A name misspelled by a letter or two is still that name, and this is the
-  // commonest way a real search failed: "sunil shetty" is Suniel Shetty and
-  // "maduri dixit" is Madhuri Dixit, but neither is a prefix or a substring of
-  // the other, so every test above scored them zero and the person was dropped.
-  //
-  // Bounded by an ABSOLUTE distance, not a ratio. Two edits is a typo; four is
-  // a different word, and a ratio alone would let "the call" reach "call" - the
-  // exact confusion the Search by control exists to prevent.
+  // A typo of one or two letters is still the name - "sunil shetty" is Suniel Shetty. An ABSOLUTE distance, not a ratio, or "the call" reaches "call".
   const distance = editDistance(left, right);
   const longest = Math.max(left.length, right.length);
   if (longest >= 6 && distance <= 2) return 1 - (distance / longest);

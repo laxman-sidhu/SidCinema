@@ -19,13 +19,7 @@ export function parseId(value) {
   return match ? parseInt(match[0], 10) : null;
 }
 
-// Lowercase, unaccented, punctuation-free, single-spaced.
-//
-// \p{L}\p{N} rather than \w, because \w is ASCII-only: every character of a
-// Devanagari, Korean or Japanese title fell outside it and was replaced by a
-// space, so the whole title normalised to the empty string and the row was never
-// indexed at all. Any sheet row with a non-Latin title and no TMDB id was
-// invisible to title matching. The /u flag is required for \p{...} to work.
+// Lowercase, unaccented, punctuation-free. \p{L}\p{N} not \w, which is ASCII-only and blanked every non-Latin title; the /u flag is required.
 export function normaliseTitle(title) {
   if (!title) return "";
   return String(title)
@@ -52,8 +46,7 @@ export function isYes(value) {
   return TRUTHY.has(String(value == null ? "" : value).trim().toLowerCase());
 }
 
-// Tidied, not translated. Casing is only fixed when the cell is entirely one
-// case, so "K-Drama" survives while "HOLLYWOOD" becomes "Hollywood".
+// Casing is only fixed when the cell is entirely one case, so "K-Drama" survives and "HOLLYWOOD" becomes "Hollywood".
 export function cleanLabel(value) {
   let text = String(value == null ? "" : value).replace(/\s+/g, " ").trim();
   if (!text) return "";
@@ -112,8 +105,7 @@ export function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// localStorage throws in private mode on some browsers, so never let it break
-// a page. A lost preference is not worth a blank screen.
+// localStorage throws in private mode; a lost preference is not worth a blank screen.
 export const store = {
   get(key) {
     try { return localStorage.getItem(key); } catch { return null; }
@@ -134,8 +126,7 @@ export const store = {
   }
 };
 
-// Bounded parallelism. TMDB rate limits, and forty simultaneous detail calls
-// is how a browse page gets itself throttled.
+// Bounded parallelism: forty simultaneous detail calls is how a browse page gets throttled.
 export async function mapLimit(items, limit, worker) {
   const out = new Array(items.length);
   let cursor = 0;

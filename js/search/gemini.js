@@ -1,13 +1,4 @@
-// Phrase to intent, for the phrasings a regex cannot reach: "best romantic
-// films of bollywood", "something mind bending from the 90s".
-//
-// It never runs for Title or Person - those scopes are the user telling us the
-// endpoint, and the offline parser handles them for free. It runs for Auto and
-// Genre & mood, where the phrase has to be decomposed into discover parameters.
-//
-// Every result is validated against the schema below before use. A model that
-// ignores an instruction is not a rare event, so the checks here are what
-// actually hold the line.
+// Phrase to intent, for phrasings a regex cannot reach. Never runs for Title or Person, and every result is schema-checked before use.
 
 import { GEMINI_API_KEY, GEMINI_MODEL } from "../config.js";
 import * as scope from "./scope.js";
@@ -18,8 +9,7 @@ const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 // Tried in order. A retired model 404s and the next one is used.
 const MODELS = [GEMINI_MODEL, "gemini-flash-latest", "gemini-2.5-flash"];
 
-// After a 429 the free tier needs a breather. Skip Gemini entirely for this
-// long rather than hammering it on every search.
+// After a 429 the free tier needs a breather: skip Gemini entirely for this long.
 const COOLDOWN_MS = 120000;
 let cooldownUntil = 0;
 
@@ -97,9 +87,7 @@ Examples:
 "netflix crime series" -> {"intent":"discover","media":"tv","company":"Netflix","genre":"Crime"}
 "anime series" -> {"intent":"discover","media":"tv","genre":"Animation","language":"Japanese"}`;
 
-// Appended when the user has chosen what they are searching by. Each says which
-// key must be filled and which must not exist, because the failure that matters
-// is a name landing in "title", or a title landing in "person".
+// Appended once the user has chosen a scope. The failure that matters is a name landing in "title", or a title in "person".
 const SCOPE_DIRECTIVES = {
   [scope.DISCOVER]:
     "The user chose SEARCH BY GENRE AND MOOD. The phrase describes a KIND of "
@@ -190,8 +178,7 @@ function cleanYear(value) {
   return year >= 1880 && year <= 2100 ? year : null;
 }
 
-// The schema gate. Anything the model returns that is not in here is dropped,
-// so a hallucinated key cannot reach the TMDB client.
+// The schema gate: anything not in here is dropped, so a hallucinated key cannot reach the TMDB client.
 function validateIntent(raw, originalQuery, mediaHint, chosenScope) {
   if (!raw || typeof raw !== "object") return null;
 
@@ -202,9 +189,7 @@ function validateIntent(raw, originalQuery, mediaHint, chosenScope) {
 
   if (typeof raw.person === "string" && raw.person.trim()) out.person = raw.person.trim().slice(0, 80);
 
-  // Four is the ceiling on purpose: an AND across five names has no answer, and
-  // a model that returned twelve has misread the phrase rather than found
-  // twelve people.
+  // Four is the ceiling on purpose: an AND across five names has no answer.
   if (Array.isArray(raw.people)) {
     const names = [];
     for (const entry of raw.people) {
@@ -254,9 +239,7 @@ function validateIntent(raw, originalQuery, mediaHint, chosenScope) {
 
   if (VALID_SORTS.includes(raw.sort)) out.sort = raw.sort;
 
-  // The scope was the user's instruction, not a suggestion. A model that
-  // returned a person under Genre & mood has misread the phrase, and honouring
-  // it would call the wrong endpoint.
+  // The scope was an instruction, not a suggestion - a person under Genre & mood would call the wrong endpoint.
   if (chosenScope === scope.DISCOVER) {
     delete out.person;
     delete out.people;
@@ -309,12 +292,7 @@ export async function parseQuery(query, mediaHint, { lockMedia = false, scope: c
   return parsed;
 }
 
-// --- spelling rescue --------------------------------------------------------
-//
-// A second, much smaller job, used only when TMDB has already come back empty.
-// Not parsing - just "what did they mean to type". The whole value is that it
-// runs LAST: calling it up front would pay for a round trip on every search,
-// including the overwhelming majority TMDB answers on the first try.
+// --- spelling rescue: "what did they mean to type", run only after TMDB came back empty ---
 
 const NORMALISE_SYSTEM = `You correct search terms for a movie database. You are given what someone typed. Return the most likely correctly-spelled name of the person, movie or series they meant.
 

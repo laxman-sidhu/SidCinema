@@ -1,5 +1,4 @@
-// The title modal, shared by all pages. Opens on a card click and fetches the
-// full record from TMDB, because a card carries only what a list endpoint gave.
+// The title modal, shared by all pages. A card carries only what a list endpoint gave, so the full record is fetched here.
 
 import { esc } from "../core/util.js";
 import { details } from "../tmdb/queries.js";
@@ -27,8 +26,7 @@ function instance() {
   return modal;
 }
 
-// Up to two initials. Anything more is unreadable at 76px, and a single letter
-// is ambiguous across a cast list.
+// Up to two initials: more is unreadable at 76px and one is ambiguous across a cast list.
 function initials(name) {
   const words = String(name || "").trim().split(/\s+/).filter(Boolean);
   if (!words.length) return "?";
@@ -38,18 +36,9 @@ function initials(name) {
   return letters.toUpperCase();
 }
 
-// A face, or the initials in its place. NOT the poster placeholder: that is a
-// 2:3 film-poster graphic, and a row of them under a cast list reads as a row of
-// missing films rather than people whose photo TMDB happens to lack.
-//
-// Deliberately one neutral treatment rather than a colour per person. Green and
-// gold already mean watched and must-watch everywhere else in this app, and
-// borrowing them for decoration would spend meaning that is already committed.
+// A face, or the initials in its place - not the poster placeholder, which would read as a row of missing films. One neutral treatment, because green and gold are already spent.
 function faceFor(person) {
-  // The initials sit BEHIND the photo rather than being swapped in by an error
-  // handler. An <img> with an empty alt that fails to load renders nothing, so
-  // the letters underneath simply show through - no inline script, and it covers
-  // a broken URL as well as a missing one.
+  // The initials sit BEHIND the photo: an <img> with an empty alt draws nothing when it fails, so the letters show through with no error handler.
   const ini = `<span class="detail__face-ini">${esc(initials(person.name))}</span>`;
   const photo = person.profile
     ? `<img src="${esc(person.profile)}" alt="" loading="lazy" decoding="async">`
@@ -59,8 +48,7 @@ function faceFor(person) {
 
 function prettyDate(date) {
   const parsed = new Date(`${date}T00:00:00`);
-  // TMDB dates are occasionally partial or malformed; show the raw string rather
-  // than "Invalid Date".
+  // TMDB dates are occasionally partial or malformed, so show the raw string rather than "Invalid Date".
   if (Number.isNaN(parsed.getTime())) return date;
   return parsed.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
@@ -92,16 +80,13 @@ const BOOKMARK = '<svg viewBox="0 0 24 24" aria-hidden="true">'
 function render(item) {
   const isTv = item.media_type === "tv";
   const seen = item.watched === true;
-  // The queue state belongs here too. The modal is the other place a title is
-  // looked at, and it said nothing about the watchlist at all.
+  // The queue state belongs here too - the modal is the other place a title is looked at.
   const queued = !seen && item.watchlisted === true;
   const kind = isTv ? "Web series" : "Film";
 
   const heroStyle = item.backdrop ? `background-image:url('${esc(item.backdrop)}')` : "";
 
-  // The rating rides in the facts line rather than in a tile of its own. It is
-  // the one number people read before deciding, so it belongs beside the year and
-  // the runtime, not three sections further down.
+  // The rating rides in the facts line: it is the one number people read before deciding.
   const facts = [];
   if (item.year) facts.push(`<span>${item.year}</span>`);
   if (item.runtime) facts.push(`<span>${runtimeLabel(item.runtime)}${isTv ? " per ep" : ""}</span>`);
@@ -112,9 +97,7 @@ function render(item) {
     facts.push(`<span>${compact(item.vote_count)} votes</span>`);
   }
 
-  // The trailer leads and the reference links follow. On a phone the trailer
-  // takes the whole first row and the rest share the second - see the grid rule
-  // in the stylesheet, which relies on .btn-solid being the only solid one here.
+  // Trailer first and the reference links after. The phone grid rule relies on .btn-solid being the only solid button here.
   const buttons = [];
   if (item.trailer) {
     buttons.push(`<button type="button" class="btn-solid" data-trailer="${esc(item.trailer.key)}">`
@@ -134,10 +117,7 @@ function render(item) {
   const genres = (item.genres || [])
     .map(genre => `<span class="detail__chip">${esc(genre)}</span>`).join("");
 
-  // A fixed grid, label above value. Every cell is always present so the grid
-  // keeps its shape between titles - an em dash says "TMDB has no figure" and
-  // an absent cell says nothing at all, which is worse. A film that has not
-  // opened has no box office yet, and that is the commonest case here.
+  // A fixed grid, label above value, every cell always present - an em dash says "no figure" where an absent cell says nothing.
   const cells = [
     ["Release date", item.release_date ? prettyDate(item.release_date) : "\u2014"],
     [isTv ? "Episode length" : "Runtime", item.runtime ? runtimeLabel(item.runtime) : "\u2014"],
@@ -211,8 +191,7 @@ function render(item) {
     + "</div>";
 }
 
-// A pointer can hover; a finger cannot. That is the only reliable signal for
-// "this is a touch device" that does not involve sniffing user agents.
+// A pointer can hover and a finger cannot: the only reliable touch signal that is not user-agent sniffing.
 function isTouch() {
   return window.matchMedia("(hover: none)").matches;
 }
@@ -220,9 +199,7 @@ function isTouch() {
 function openTrailer(key) {
   const slot = document.getElementById("trailerSlot");
   if (!slot) return;
-  // The close button sits ABOVE the video, not on it. Inside the frame it landed
-  // on YouTube's own settings and fullscreen controls, so the two fought for the
-  // same corner and either could be hit by mistake.
+  // The close button sits ABOVE the video: inside the frame it fought YouTube's own controls for the same corner.
   slot.innerHTML = '<div class="detail__trailer">'
     + '<div class="detail__trailer-bar">'
     + '<span class="detail__trailer-label">Trailer</span>'
@@ -234,8 +211,7 @@ function openTrailer(key) {
     + `<iframe src="https://www.youtube.com/embed/${esc(key)}?autoplay=1" title="Trailer" `
     + 'allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture" '
     + 'allowfullscreen loading="lazy"></iframe></div></div>';
-  // Guarded: not every environment implements it, and failing to scroll should
-  // never stop the video from playing.
+  // Guarded: not every environment implements it, and failing to scroll must not stop the video playing.
   if (typeof slot.scrollIntoView === "function") {
     slot.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
@@ -243,8 +219,7 @@ function openTrailer(key) {
 
 function closeTrailer() {
   const slot = document.getElementById("trailerSlot");
-  // Emptying the slot is what stops the audio. Hiding it would leave the video
-  // playing behind a closed panel.
+  // Emptying the slot is what stops the audio; hiding would leave it playing behind a closed panel.
   if (slot) slot.innerHTML = "";
 }
 
@@ -264,13 +239,7 @@ function wire() {
       return;
     }
 
-    // On a pointer device, a click anywhere else in the modal puts the video
-    // away - the quickest gesture for the commonest intention.
-    //
-    // NOT on touch. A phone gets handled carelessly and a stray thumb anywhere
-    // on the sheet would kill a video mid-scene, so there the explicit close
-    // button is the only way out. Same reason a swipe-to-delete needs a
-    // confirmation and a click-to-delete does not.
+    // A click elsewhere closes the video on a pointer device but NOT on touch, where a stray thumb would kill it mid-scene.
     if (!isTouch() && document.getElementById("trailerSlot").firstChild
         && !event.target.closest(".detail__trailer")) {
       closeTrailer();
@@ -307,19 +276,10 @@ export async function open(itemId, media) {
   }
 }
 
-// Controls that live inside a card but must not open it. stopPropagation is not
-// enough on its own: the card handler is bound to the same container and
-// registered first, and stopPropagation only stops a click travelling UP, not a
-// sibling listener on the same element. If you add another in-card control, add
-// it here.
+// In-card controls that must not open the card. stopPropagation is not enough: the card handler is on the same element and registered first.
 const IN_CARD = ".cardact, .card__note";
 
-// The "what my sheet calls it" tip.
-//
-// On a pointer device it appears on hover. A touch screen has no hover, so the
-// (i) button carries it there, and the whole feature was invisible on a phone
-// until this existed. Tapping it again closes it, as does tapping anywhere else
-// - a tip that can only be opened is a tip stuck open.
+// The "what my sheet calls it" tip: hover on a pointer device, the (i) button on touch, and tapping again closes it.
 let noteWired = false;
 
 function wireNotes() {

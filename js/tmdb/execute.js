@@ -1,5 +1,4 @@
-// Turns an intent into results. The scope decides the endpoint before any
-// guessing happens, which is the whole point of the "Search by" control.
+// Turns an intent into results. The scope decides the endpoint before any guessing happens.
 
 import * as tmdb from "./client.js";
 import * as q from "./queries.js";
@@ -11,8 +10,7 @@ function noun(media) {
   return media === TV ? "Series" : "Movies";
 }
 
-// Credit endpoints cannot filter by genre, so it happens here. An empty filter
-// result returns the unfiltered set rather than a blank page.
+// Credit endpoints cannot filter by genre, so it happens here; an empty filter result returns the unfiltered set.
 function filterByGenre(items, genreNames) {
   if (!genreNames || !genreNames.length) return items;
   const wanted = genreNames.map(name => String(name).toLowerCase());
@@ -62,12 +60,7 @@ async function resolvePerson(intent, media) {
   return q.searchPerson(name, intent.strict_person !== false);
 }
 
-// Names to TMDB people, in parallel, keeping the order they were typed in.
-//
-// Each name is tried strictly first. Strict is what stops "The Call" resolving
-// to someone surnamed Call; loose is what rescues a name TMDB spells its own
-// way. A name that resolves to nobody is reported rather than dropped, so the
-// caller can correct it and try again.
+// Names to TMDB people in parallel, in the order typed. Strict first then loose, and a name matching nobody is reported rather than dropped.
 async function resolvePeople(intent, media) {
   const names = (intent.people || []).map(name => String(name || "").trim()).filter(Boolean);
   const ids = intent.person_ids || [];
@@ -100,19 +93,11 @@ async function resolvePeople(intent, media) {
   return { people, missing };
 }
 
-// Films or series that ALL of these people worked on.
-//
-// Two routes, and which one is used is not a preference: /discover carries the
-// genre, the years and the sort as server-side filters and is one request, but
-// it only exists for movies and only indexes billed cast. The intersection of
-// their credit lists covers everything else, at the cost of one request per
-// person.
+// What ALL of these people worked on. /discover is one request but movies-only and billed cast only, so the credit intersection covers the rest.
 async function runPeopleScope(intent, genres, media) {
   const { people, missing } = await resolvePeople(intent, media);
 
-  // Only one name resolved, so this is not a co-star search any more. Their own
-  // filmography is a far better answer than an empty page, and the headline
-  // names who it actually found.
+  // Only one name resolved, so their own filmography beats an empty page and the headline says whose it is.
   if (people.length < 2) {
     if (!people.length) return { people: [], missing, items: [] };
     const single = { ...intent, person_id: people[0].id, person: people[0].name };
@@ -127,8 +112,7 @@ async function runPeopleScope(intent, genres, media) {
     items = await q.discover({
       media,
       withPeople: ids,
-      // A director-and-actor pairing is a crew credit on one side, and
-      // with_cast would never see it.
+      // A director-and-actor pairing is a crew credit on one side, and with_cast would never see it.
       crewToo: intent.role === "director" || !intent.role,
       genreNames: genres,
       year: intent.year,
@@ -138,8 +122,7 @@ async function runPeopleScope(intent, genres, media) {
     });
   }
 
-  // No discover for series, and billed-cast-only for films, so the credit
-  // intersection is the fallback rather than the exception.
+  // No discover for series and billed-cast-only for films, so the intersection is the rule rather than the exception.
   if (items.length < 2) {
     const shared = await q.sharedFilmography(ids, intent.role || null, media);
     if (shared.length > items.length) items = filterByGenre(shared, genres);
@@ -177,8 +160,7 @@ async function runTitleScope(intent, genres, media) {
   return { seed, items: filterByGenre(items, genres) };
 }
 
-// Discover with progressively looser filters. A four-way AND on TMDB often
-// returns nothing, and an empty page is a worse answer than a broader one.
+// Discover with progressively looser filters: a four-way AND often returns nothing, and empty is a worse answer than broader.
 async function discoverWithFallbacks(intent, genres, media) {
   const base = {
     media,
@@ -227,10 +209,7 @@ function headlineFor(intent, person, seed, people) {
   const chosen = scope.clean(intent.scope);
   const word = noun(media);
 
-  // Named people outrank every other rule. This is the most specific thing a
-  // phrase can say and the first thing the reader checks the headline for - and
-  // it has to come before the scope branches below, which know nothing about a
-  // search having more than one subject.
+  // Named people outrank every other rule, and must come before the scope branches, which know nothing about multiple subjects.
   if (people) {
     if (people.length > 1) {
       const bits = [];
@@ -245,13 +224,10 @@ function headlineFor(intent, person, seed, people) {
       const wanted = (intent.people || []).join(" and ");
       return wanted ? `Nobody on TMDB matches \u201c${wanted}\u201d` : "No such person";
     }
-    // Exactly one of them resolved. That is one filmography now, so it falls
-    // through to the rule below and the headline names whose it is rather than
-    // implying it covered both.
+    // Exactly one resolved, so this is one filmography now and the headline names whose.
   }
 
-  // A scoped search that found nothing has to say WHAT it looked for, or the
-  // empty screen reads as a broken search rather than an absent title.
+  // A scoped search that found nothing has to say WHAT it looked for, or the empty screen reads as broken.
   if (chosen === scope.PERSON && !person) {
     const wanted = intent.person || intent.query || "";
     return wanted ? `Nobody on TMDB matches \u201c${wanted}\u201d` : "No such person";
@@ -305,8 +281,7 @@ async function result(items, media, intent, person, seed, people = null, missing
     headline: headlineFor(intent, person, seed, people),
     person: person || null,
     people: people || null,
-    // Names TMDB could not place. The caller uses these to decide whether a
-    // correction is worth trying; nothing here reports them to the reader.
+    // Names TMDB could not place, for the caller to decide whether a correction is worth trying.
     people_missing: missing || [],
     seed: seed || null,
     resolved_intent: intent
@@ -323,9 +298,7 @@ export async function executeIntent(intent) {
   let kind = intent.intent || "search";
   const genres = genresOf(intent);
 
-  // More than one name is a different question from one name, whatever scope
-  // the user picked: under Person it is still a person search, and under Auto
-  // it is the only reading of "X and Y movies" that makes sense.
+  // More than one name is a different question whatever the scope: under Person it is still people, under Auto it is the only sensible reading.
   const named = (intent.people || []).filter(Boolean);
   if (named.length > 1 && chosen !== scope.DISCOVER && chosen !== scope.TITLE) {
     const found = await runPeopleScope(intent, genres, media);
@@ -376,8 +349,7 @@ export async function executeIntent(intent) {
     const query = intent.title || intent.person || "";
     if (query) {
       const found = await q.titleSearch(query, media);
-      // A phrase that matched no title exactly is more likely a person than a
-      // misspelled film, so try a name before falling through to discover.
+      // A phrase matching no title exactly is more likely a person than a misspelled film.
       if (found.items.length && q.hasExactTitle(found.items, query, intent.query)) {
         seed = found.seed;
         items = found.items;
@@ -400,8 +372,7 @@ export async function executeIntent(intent) {
     else if (kind === "top_rated") items = await q.topRatedTitles(media);
   }
 
-  // Only reached when no person or seed resolved, so this cannot replace a real
-  // filmography with unrelated popular titles.
+  // Only reached when no person or seed resolved, so this cannot replace a real filmography with unrelated popular titles.
   if (!items.length && !person && !seed) {
     items = await discoverWithFallbacks(intent, genres, media);
   }

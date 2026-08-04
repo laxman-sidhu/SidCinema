@@ -1,14 +1,9 @@
-// Rewrites a search phrase when the user flips the Movies/Series toggle.
-//
-//   rewriteForMedia("Hrithik Roshan movies", "tv") -> "Hrithik Roshan series"
-//   rewriteForMedia("shows like Breaking Bad", "movie") -> "movies like Breaking Bad"
-//   rewriteForMedia("movies", "tv") -> ""   nothing left to search for
+// Rewrites a phrase when the Movies/Series toggle flips: "Hrithik Roshan movies" + tv -> "Hrithik Roshan series".
 
 const MOVIE = "movie";
 const TV = "tv";
 
-// Longest first, so "web series" is consumed before the bare "series" can match
-// inside it.
+// Longest first, so "web series" is consumed before the bare "series" can match inside it.
 const MOVIE_WORDS = [
   "feature films", "feature film", "motion pictures", "motion picture",
   "movies", "movie", "films", "film", "flicks", "flick", "cinema"
@@ -22,17 +17,13 @@ const TV_WORDS = [
   "episodes", "episode", "shows", "show", "series", "tv"
 ];
 
-// Deliberately short: "best", "trending" and "latest" all survive a toggle, so
-// "top trending movies" becomes "top trending series" rather than collapsing to
-// the home feed.
+// Deliberately short: "best", "trending" and "latest" all survive a toggle.
 const FILLER = new Set([
   "the", "a", "an", "of", "all", "some", "any", "me", "my", "for",
   "in", "on", "show", "find", "list", "give", "search", "please", "watch"
 ]);
 
-// Some format words carry a subject as well as a format. Swapping "k-drama"
-// straight to "movies" would throw away the Korean part, so these are unpacked
-// into the subject they imply before the format swap runs.
+// Some format words carry a subject too, so "k-drama" is unpacked into "korean" before the format swap runs.
 const FLAVOUR = [
   [/\b(k[-\s]?dramas?|korean dramas?)\b/gi, "korean"],
   [/\bsitcoms?\b/gi, "comedy"],
@@ -87,9 +78,7 @@ export function rewriteForMedia(query, media) {
 
   text = tidy(text);
 
-  // Unpacking a flavour word can leave the phrase with no format noun at all
-  // ("best k-dramas" -> "best korean"). Put one back, but only when the original
-  // had one - a bare title like "Interstellar" should stay a title.
+  // Unpacking can leave no format noun at all; put one back, but only when the original had one.
   if (hadMediaWord && !hasMediaWords(text)) {
     text = tidy(`${text} ${media === TV ? "series" : "movies"}`);
   }

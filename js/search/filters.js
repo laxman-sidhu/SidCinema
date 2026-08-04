@@ -1,13 +1,4 @@
-// The browse filters.
-//
-// NOT a view over whatever the last search returned. Picking Hindi and Romance
-// runs a fresh discover query across the entire catalogue, so the filters are a
-// way into the millions of titles TMDB holds rather than a sieve over the twenty
-// on screen.
-//
-// Genre options carry the genre NAME, not its id. TMDB numbers genres
-// differently for movies and TV ("Action" is 28, "Action & Adventure" is 10759),
-// and names let a selection survive the Movies/Series toggle.
+// The browse filters. NOT a sieve over the last result set - each pick runs a fresh discover query across the whole catalogue.
 
 import * as tmdb from "../tmdb/client.js";
 import { discover } from "../tmdb/queries.js";
@@ -21,8 +12,7 @@ const KEYS = ["genre", "language", "year", "sort", "rating"];
 const OLDEST_YEAR = 1950;
 const FUTURE_YEARS = 2;
 
-// popularity is what discover does when asked for nothing, so it is the one
-// sort that means "no sort".
+// popularity is what discover does when asked for nothing, so it is the one sort that means "no sort".
 const DEFAULT_SORT = "popularity";
 
 const SORTS = [
@@ -40,8 +30,7 @@ const RATINGS = [
   { value: "8", label: "8+" }
 ];
 
-// Languages worth offering. The full TMDB list is ~190 entries, most of which
-// have a handful of titles, and a dropdown that long is not a control.
+// Languages worth offering. The full TMDB list is ~190 entries, and a dropdown that long is not a control.
 const LANGUAGE_ORDER = [
   "hi", "en", "ta", "te", "ml", "kn", "mr", "bn", "pa", "gu",
   "ko", "ja", "zh", "es", "fr", "de", "it", "ru", "tr", "th", "ar", "fa"
@@ -81,9 +70,7 @@ export async function filterOptions(media) {
   const kind = tmdb.cleanMedia(media);
   const [genres, languages] = await Promise.all([genreOptions(kind), languageOptions()]);
 
-  // A series has no box office. discover already degrades revenue to popularity
-  // for TV, but an option that silently means something else is worse than an
-  // option that is not there.
+  // A series has no box office, and an option that silently means something else is worse than one that is not there.
   const sorts = kind === TV ? SORTS.filter(entry => entry.value !== "revenue") : SORTS;
 
   return {
@@ -108,17 +95,7 @@ export function cleanSelection(raw) {
   return out;
 }
 
-// Is there a query here, or is this the home feed with extra steps?
-//
-// A sort used to count for nothing, which was right for popularity and wrong
-// for every other one. "Biggest box office" with nothing else picked is a real
-// question with a real answer - the highest grossing films there are - and it
-// was being answered with the trending feed, which looked like the sort had
-// simply been ignored. Sorting the twenty titles already on screen is not what
-// this panel does; it queries the whole catalogue.
-//
-// popularity is still the exception, because it is what discover does when
-// asked for nothing at all.
+// A sort on its own is a real query: "Biggest box office" used to fall through to the trending feed. popularity stays the exception.
 export function isActive(selection) {
   const chosen = selection || {};
   if (["genre", "language", "year", "rating"].some(key => text(chosen[key]))) return true;
@@ -126,8 +103,7 @@ export function isActive(selection) {
   return Boolean(sort) && sort !== DEFAULT_SORT;
 }
 
-// What a chip should say. The stored value is the API's word for it - "revenue"
-// on a chip means nothing to anyone reading it.
+// What a chip should say - "revenue" is the API's word and means nothing to anyone reading it.
 export function labelFor(key, value) {
   const wanted = text(value);
   if (!wanted) return "";
@@ -140,10 +116,7 @@ export function labelFor(key, value) {
   return wanted;
 }
 
-// A genre is handled one of three ways: it exists here and is kept; it is the
-// other catalogue's name for the same thing and is rewritten; or it does not
-// exist here and is removed and reported. Running the query without a genre the
-// UI still shows as active reads as "the filter does nothing".
+// A genre is kept, rewritten to the other catalogue's name for it, or removed and reported.
 export async function resolve(selection, media) {
   const kind = tmdb.cleanMedia(media);
   const usable = { ...(selection || {}) };

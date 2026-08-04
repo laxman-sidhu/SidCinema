@@ -4,11 +4,7 @@
 /* Every colour is a token. Adding [data-theme="dark"] overrides below is the */
 /* only thing needed to reskin the whole app, so never hardcode a hex here. */
 
-/* The browser's own [hidden] rule is a user-agent style, so any author rule
-   that sets display - .grid, .loading-line, .loadmore - silently outranks it
-   and the element keeps its box. Every hidden panel in this app carries such a
-   class, so without this the skeleton grid alone leaves ~1200px of blank space
-   under the toolbar at all times. */
+/* [hidden] is a user-agent rule, so any author rule setting display outranks it and the element keeps its box. */
 [hidden] { display: none !important; }
 
 /* --- tokens: light --- */
@@ -47,11 +43,7 @@
 
   /* Surfaces that are not simply --card. */
   --wash-top:   #ffffff;
-  /* Was written as var(--glass), which refers to itself: a circular custom
-     property is invalid, so the header and the search bar resolved to no
-     background at all in light mode. The value here is what the rest of the
-     light scheme implies - white, held just short of opaque so the blur behind
-     it has something to do. */
+  /* Was var(--glass), which referred to itself: a circular custom property is invalid, so this resolved to no background at all. */
   --glass:      rgba(255, 255, 255, 0.84);
   --shimmer:    #ffffff;
   --on-ink:     #ffffff;
@@ -139,24 +131,7 @@
 /* --- base --- */
 * { box-sizing: border-box; }
 
-/* --- overall scale -------------------------------------------------------
-   Everything was drawn a size too large: at 100% in a laptop browser the cards
-   and headings ate the screen, and the layout only came right once you zoomed
-   the browser out to about 70%. Rather than re-tune several hundred px values
-   one at a time - and get some of them wrong - the whole page is scaled by
-   that same factor, which is what the browser zoom was doing anyway.
-
-   `zoom` and not `transform: scale()`: zoom reflows, so the card grid gains
-   columns and text rewraps at the new size. A transform would shrink a fixed
-   layout and leave dead space around it.
-
-   Only on screens big enough to have the problem. Phones and tablets already
-   fit, and shrinking them further would make the text unreadable. Media
-   queries still measure the real viewport, so every breakpoint below is
-   unaffected, and fixed-position elements - the modal, the sticky header -
-   still fill the screen properly. Both verified in a browser.
-
-   One number, so it is easy to tune. */
+/* --- overall scale: one number, because the page was drawn a size too large. `zoom` not `transform`, since zoom reflows and the grid gains columns. --- */
 :root { --ui-scale: 0.7; }
 
 @media (min-width: 1024px) {
@@ -165,10 +140,7 @@
 
 body {
   margin: 0;
-  /* 100vh on a phone means "the viewport with the browser chrome hidden", so
-     it is always taller than what is actually visible and leaves a dead strip
-     under the footer. dvh is the real number; vh stays as the fallback for
-     anything that does not know the unit. */
+  /* 100vh on a phone is the viewport with the chrome hidden, so it leaves a dead strip; dvh is the real number and vh is the fallback. */
   min-height: 100vh;
   min-height: 100dvh;
   background: var(--paper);
@@ -177,8 +149,7 @@ body {
   font-size: 15px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
-  /* Stops iOS enlarging body text when the phone is turned to landscape,
-     which otherwise reflows the card grid mid-rotation. */
+  /* Stops iOS enlarging body text in landscape, which reflows the card grid mid-rotation. */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   overflow-x: hidden;
@@ -195,11 +166,7 @@ button { font-family: inherit; }
 
 svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 
-/* Full-bleed container. Only the hero column is width-capped.
-   The max() is for a phone held sideways: the safe-area inset is the width of
-   the notch or the rounded corner, and without it the first card in every row
-   sits underneath one. On every other device both insets are 0 and this is
-   exactly the clamp it was before. */
+/* Full-bleed container; only the hero column is width-capped. The max() keeps the first card in a row clear of a notch. */
 .wrap {
   width: 100%;
   padding-left: max(clamp(16px, 3.5vw, 56px), env(safe-area-inset-left));
@@ -207,9 +174,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round
 }
 
 /* Soft ambient wash behind the hero. */
-/* Bootstrap supplies this, but it arrives from a CDN. If that request is slow
-   or blocked, every "hidden" form label becomes visible text in the middle of
-   the layout - so it is defined here too. */
+/* Bootstrap supplies this from a CDN, so it is defined here too: if that request is blocked, every hidden form label becomes visible text. */
 .visually-hidden {
   position: absolute !important;
   width: 1px;
@@ -254,9 +219,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round
 
 .wordmark { display: inline-flex; align-items: center; gap: 11px; }
 
-/* An image now, not a drawn ring. object-fit keeps a non-square source from
-   stretching, and the tinted background stands in if the remote file never
-   arrives, so the wordmark never collapses to bare text. */
+/* An image, not a drawn ring. object-fit stops a non-square source stretching and the tint stands in if the file never arrives. */
 .wordmark__mark {
   width: 28px;
   height: 28px;
@@ -272,12 +235,10 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round
   font-weight: 800;
   font-size: 19px;
   letter-spacing: -0.02em;
-  /* The header is one row. A wordmark allowed to wrap takes the row height
-     with it and pushes the tools off the edge. */
+  /* The header is one row: a wordmark allowed to wrap takes the row height with it and pushes the tools off the edge. */
   white-space: nowrap;
 }
-/* Only the full stop is accented. It used to be "any span in here", which
-   stopped being specific enough once the name had two spellings. */
+/* Only the full stop is accented - "any span in here" stopped being specific enough once the name had two spellings. */
 .wordmark__dot { color: var(--accent); }
 .wordmark__brief { display: none; }
 
@@ -305,9 +266,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round
 }
 .icon-btn:active { transform: translateY(0); }
 
-/* A pill rather than a circle, because this one goes somewhere and the label
-   is what makes that obvious. The text drops on narrow screens; the icon and
-   the tooltip still carry the meaning. */
+/* A pill rather than a circle, because this one goes somewhere and the label is what makes that obvious. */
 .icon-btn--label {
   width: auto;
   gap: 8px;
@@ -368,13 +327,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round
 /* --- hero --- */
 .hero {
   position: relative;
-  /* Above .results, which is also positioned and comes later in the document.
-     While both sat at z-index 1 the later one won, and since the suggestion
-     dropdown is sealed inside this element's stacking context it could never
-     climb out - the divider line, the headline and the first row of cards all
-     painted straight over it, however high its own z-index went. Ranking the
-     two sections is what actually decides it. Still well under the sticky
-     header at 60, which should keep winning. */
+  /* Above .results, which is also positioned and comes later: while both sat at 1 the later one won and sealed the dropdown in. Still under the sticky header at 60. */
   z-index: 20;
   padding: clamp(40px, 6vw, 82px) 0 44px;
 }
@@ -445,10 +398,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round
   box-shadow: 0 5px 14px -7px rgba(var(--shade-rgb), 0.8);
 }
 
-/* Search by, inside the bar.
-   It was a row of buttons above the input, which made the hero ask two
-   questions of equal size before you could type anything. As a dropdown it
-   reads as what it is: a setting on the search, not a decision before it. */
+/* Search by, inside the bar. As a row of buttons above the input the hero asked two questions of equal size before you could type. */
 .scopepick {
   position: relative;
   display: flex;
@@ -475,9 +425,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round
   appearance: none;
   -webkit-appearance: none;
   border: 0;
-  /* The solid accent the Search button used to wear. That button is gone -
-     the magnifier submits now - so the colour moves to the control that took
-     its place, and the right-hand end of the bar keeps the weight it had. */
+  /* The solid accent the Search button used to wear; the magnifier submits now, so the colour moves to the control that took its place. */
   background: var(--accent);
   color: var(--on-accent);
   font-family: inherit;
@@ -497,9 +445,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round
   outline: 2px solid var(--accent-deep);
   outline-offset: 2px;
 }
-/* The dropdown list itself is drawn by the OS, which does not inherit the
-   accent - so the options are set back to normal page colours or they can
-   land as white-on-white. */
+/* The dropdown list is drawn by the OS and does not inherit the accent, so options are set back to page colours or they land white-on-white. */
 .scopepick__select option {
   background: var(--card);
   color: var(--ink);
@@ -546,14 +492,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round
 
 .searchbox {
   position: relative;
-  /* The suggestion dropdown lives inside this box, and `backdrop-filter`
-     below makes the box its own stacking context - so the dropdown's z-index
-     only ranks it against its siblings IN HERE and cannot lift it over
-     anything outside. The example chips below carry a mask-image, which is
-     also a stacking context, and being later in the document they were
-     painting straight over the top of the dropdown: the names were visible
-     but every tap landed on a chip. This z-index ranks the two boxes against
-     each other, which is the comparison that actually decides it. */
+  /* backdrop-filter below makes this box its own stacking context, so the dropdown inside could not climb over the mask-image chips that follow it. Ranking the two boxes is what decides it. */
   z-index: 30;
   display: flex;
   align-items: center;
@@ -604,10 +543,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round
 .searchbox__clear svg { width: 15px; height: 15px; }
 .searchbox__clear:hover { background: var(--tint-2); color: var(--ink); }
 
-/* --- name autocomplete ---
-   Anchored to the bar rather than the page, so it stays put when the bar wraps
-   on a narrow screen. z-index sits above the hero but below the header, which
-   is sticky and has to keep winning. */
+/* --- name autocomplete: anchored to the bar so it stays put when the bar wraps, above the hero but below the sticky header --- */
 .acbox {
   position: absolute;
   top: calc(100% + 8px);
@@ -649,8 +585,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round
   transition: background 0.14s, color 0.14s;
 }
 
-/* One highlight style for both the pointer and the arrow keys, so the list
-   never shows two different "current" rows at once. */
+/* One highlight for both the pointer and the arrow keys, so the list never shows two "current" rows at once. */
 .acbox__item:hover,
 .acbox__item.is-active {
   background: var(--accent-tint);
@@ -667,8 +602,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* The letters actually typed. Bolder, not coloured - colour here would fight
-   the row highlight. */
+/* The letters actually typed. Bolder, not coloured - colour here would fight the row highlight. */
 .acbox__name b { font-weight: 800; color: inherit; }
 .acbox__item:hover .acbox__name,
 .acbox__item.is-active .acbox__name { color: var(--accent-deep); }
@@ -689,9 +623,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round
 }
 .suggestions::-webkit-scrollbar { display: none; }
 
-/* While the name dropdown is open the chips underneath it are both redundant
-   and in the way. Hidden rather than removed, so the hero does not jump a row
-   taller and shorter on every keystroke. */
+/* Hidden rather than removed while the dropdown is open, so the hero does not jump a row taller and shorter on every keystroke. */
 body.is-suggesting .suggestions {
   visibility: hidden;
   pointer-events: none;
@@ -745,9 +677,7 @@ body.is-suggesting .suggestions {
   color: var(--ink-soft);
   font-size: 14px;
   text-align: left;
-  /* The hero is a centred flex column, so children shrink-to-fit rather than
-     stretch. Without width:100% this box sizes to its max-width and hangs off
-     both edges of a narrow screen. */
+  /* The hero is a centred flex column, so without width:100% this box sizes to its max-width and hangs off both edges of a narrow screen. */
   width: 100%;
   max-width: 760px;
   overflow-wrap: anywhere;
@@ -792,11 +722,7 @@ body.is-suggesting .suggestions {
   margin: 0;
 }
 
-/* The "did you mean" line.
-   Green because green already means "this is resolved" everywhere else in the
-   app, and a correction that worked is exactly that. Centred and set on its
-   own row above the headline so it reads as a short announcement rather than
-   a caption hanging off the title. */
+/* The "did you mean" line. Green because green already means "resolved" everywhere else, and on its own row so it reads as an announcement. */
 .toolbar__fixed {
   display: flex;
   align-items: center;
@@ -819,8 +745,7 @@ body.is-suggesting .suggestions {
   font-weight: 800;
   color: var(--seen);
 }
-/* The name that was actually searched. The rest of the sentence is context;
-   this is the part worth reading. */
+/* The name that was actually searched: the rest of the sentence is context, this is the part worth reading. */
 .toolbar__fixed b { font-weight: 800; }
 
 /* How much of this result set is already watched. */
@@ -1042,22 +967,18 @@ body.is-suggesting .suggestions {
   margin-top: 36px;
 }
 
-/* Cards added by "Load more" animate individually. The page-load stagger is
-   deliberately not reused: it delays the last card by half a second, which on
-   an append reads as lag rather than polish. */
+/* Cards from "Load more" animate individually - the page-load stagger delays the last card half a second, which on an append reads as lag. */
 .card.is-new { animation: rise 0.34s var(--ease) both; animation-delay: 0ms; }
 
 /* --- result sections --- */
 .sections { display: flex; flex-direction: column; gap: 44px; }
 
-/* A filter change keeps the current cards on screen and just dims them, so a
-   fast round trip does not read as a full page reload. */
+/* A filter change keeps the current cards on screen and dims them, so a fast round trip does not read as a full page reload. */
 .sections.is-refreshing {
   opacity: 0.45;
   pointer-events: none;
   transition: opacity 0.18s var(--ease);
-}/* Upcoming titles: dated, not yet watchable, so gold rather than green.
-   Sits opposite the watched badge, which owns the top-left corner. */
+}/* Upcoming titles are dated but not watchable, so gold rather than green. Sits opposite the watched badge. */
 .card__soon {
   position: absolute;
   top: 10px;
@@ -1127,14 +1048,7 @@ body.is-suggesting .suggestions {
   background: var(--tint);
 }
 .card__poster img {
-  /* POSITIONED, and that is the whole fix.
-     .card__noposter is position:absolute and comes first in the markup so the
-     image can cover it. But a positioned element paints above a NON-positioned
-     one whatever the DOM order says, so the title was painting on top of every
-     poster in the grid - the same rule that once let .wash veil the library.
-     Once the image is positioned too, source order decides and it wins. The
-     modal's own fallbacks were already built this way; the card was the one
-     place that was not. */
+  /* POSITIONED, and that is the whole fix: a positioned element paints above a non-positioned one whatever the DOM order says, so the title painted over every poster until the image was positioned too. */
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1177,15 +1091,7 @@ body.is-suggesting .suggestions {
 }
 .card__badge svg { width: 12px; height: 12px; stroke-width: 3; }
 
-/* --- what my own list calls it -------------------------------------------
-   Only on watched cards. TMDB's title and my sheet's Name often differ - a
-   regional release, a transliteration, a franchise numbered differently - and
-   the sheet's version is the one I recognise.
-
-   Two ways in, because there are two kinds of device. On a pointer device it
-   appears on hover, which costs nothing and needs no button. On a touch screen
-   hover does not exist, so the (i) toggles it. The button is always in the DOM
-   and only hidden from pointer devices, so the two never disagree. */
+/* --- what my own list calls it: only on watched cards, on hover for a pointer device and behind the (i) on touch, where hover does not exist --- */
 .card__note {
   position: absolute;
   top: 10px;
@@ -1215,9 +1121,7 @@ body.is-suggesting .suggestions {
 .card__note:hover { background: var(--accent-deep); transform: scale(1.08); }
 .card__note:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* Anchored to the TOP of the poster. It used to sit at the bottom, which is
-   now where the four action buttons live - the two overlapped, and the tip
-   covered the buttons the moment a watched card was hovered. */
+/* Anchored to the TOP of the poster: at the bottom it overlapped the action buttons and covered them the moment a card was hovered. */
 .card__notetip {
   position: absolute;
   left: 8px;
@@ -1274,9 +1178,7 @@ body.is-suggesting .suggestions {
 .card__note[aria-expanded="true"] ~ .card__badge { opacity: 0; }
 .card__note[aria-expanded="true"] { background: var(--accent-deep); }
 
-/* Hover only where hovering is possible. A touch screen reporting no hover
-   keeps the button; a mouse gets the tooltip for free and the button fades
-   back so it does not clutter every watched poster. */
+/* Hover only where hovering is possible - a touch screen keeps the button, a mouse gets the tooltip and the button fades back. */
 @media (hover: hover) and (pointer: fine) {
   .card:hover .card__notetip { opacity: 1; transform: translateY(0); }
   .card__note { opacity: 0; transition: opacity 0.18s, background 0.18s; }
@@ -1650,20 +1552,7 @@ body.is-suggesting .suggestions {
 .footer__made { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .footer__heart { font-size: 15px; display: inline-block; animation: beat 2.4s var(--ease) infinite; }
 
-/* =========================================================================
-   RESPONSIVE
-   The desktop layout is scaled down by `zoom` above 1024px, so everything
-   below that breakpoint is drawn at 1:1 and has to be tuned on its own terms
-   rather than inherited from a shrunken desktop. Three sizes matter:
-
-     991px  tablets and small laptops - the detail modal stops being wide
-     767px  phones held either way    - one column of controls, two of cards
-     480px  small phones              - the short wordmark, the tightest grid
-
-   Written mobile-last on purpose: the desktop rules above are the ones that
-   were already right, and overriding them downwards is a smaller and safer
-   change than re-basing the whole sheet.
-   ========================================================================= */
+/* === RESPONSIVE: below 1024px nothing is scaled by `zoom`, so each breakpoint is tuned on its own terms. 991px tablets, 767px phones, 480px small phones. Written mobile-last on purpose. === */
 
 @media (max-width: 991px) {
   .detail__head { padding: 0 24px; gap: 20px; }
@@ -1674,10 +1563,7 @@ body.is-suggesting .suggestions {
 /* --- phones ------------------------------------------------------------- */
 @media (max-width: 767px) {
 
-  /* iOS zooms the whole page whenever a focused field is under 16px, and
-     never zooms back out. Every typeable control is pinned to 16px here for
-     that one reason - it is the single biggest thing that made this feel
-     unfinished on a phone. */
+  /* iOS zooms the page whenever a focused field is under 16px and never zooms back out, so every typeable control is pinned to 16px here. */
   .searchbox__input,
   .scopepick__select,
   .sortfield select,
@@ -1693,11 +1579,7 @@ body.is-suggesting .suggestions {
   .wordmark__mark { width: 25px; height: 25px; }
   .wordmark__text { font-size: 16.5px; }
 
-  /* --- hero ---
-     Everything above the results is an introduction, and on a phone it was
-     costing most of the first screen before a single poster appeared. Each
-     piece steps down a little and the gaps between them close up, so the
-     grid starts higher without the hero looking cramped. */
+  /* --- hero: everything above the results is an introduction, and on a phone it cost most of the first screen before a single poster --- */
   .hero { padding: 20px 0 24px; }
   .hero__eyebrow { font-size: 9.5px; letter-spacing: 0.14em; margin-bottom: 10px; }
   .hero__title { font-size: clamp(25px, 7vw, 34px); line-height: 1.1; margin-bottom: 16px; }
@@ -1712,11 +1594,7 @@ body.is-suggesting .suggestions {
   }
   .modeswitch__btn svg { width: 15px; height: 15px; }
 
-  /* The bar wraps at 767 rather than 420. Between those two widths the scope
-     dropdown, its label and the input were sharing one line, which left the
-     input about eight characters wide on a large phone - technically laid out,
-     practically unusable. Two full-width rows instead: type on the first,
-     choose what you are typing on the second. */
+  /* The bar wraps at 767 rather than 420: between those widths the scope dropdown, its label and the input shared one line and left the input eight characters wide. */
   .searchbox {
     flex-wrap: wrap;
     gap: 8px;
@@ -1749,8 +1627,7 @@ body.is-suggesting .suggestions {
 
   .acbox__item { padding: 12px; }
   .acbox__name { font-size: 15px; }
-  /* Role and industry are nice-to-know, and the first thing to go when the
-     row has to hold a full name on a 360px screen. */
+  /* Role and industry are nice-to-know, and the first thing to go when the row has to hold a full name at 360px. */
   .acbox__meta { display: none; }
 
   .searchbox__input::placeholder { font-size: 14px; }
@@ -1767,8 +1644,7 @@ body.is-suggesting .suggestions {
   .toolbar__title { font-size: 21px; }
   .toolbar__fixed { font-size: 12.5px; line-height: 1.45; }
 
-  /* Full width and horizontal, so the bar reads as a bar instead of a
-     narrow column pinned to one side of the heading. */
+  /* Full width and horizontal, so the bar reads as a bar rather than a narrow column pinned beside the heading. */
   .coverage {
     width: 100%;
     min-width: 0;
@@ -1782,8 +1658,7 @@ body.is-suggesting .suggestions {
 
   .toolbar__controls { margin-top: 16px; gap: 10px; }
 
-  /* The three status buttons share the row evenly rather than clustering at
-     one end and leaving the sort control stranded. */
+  /* The three status buttons share the row evenly rather than clustering at one end and stranding the sort control. */
   .segmented { flex: 1 1 auto; }
   .segmented__btn { flex: 1; padding: 9px 8px; font-size: 12.5px; }
   .sortfield { flex: 1 1 100%; justify-content: space-between; gap: 10px; }
@@ -1793,10 +1668,7 @@ body.is-suggesting .suggestions {
   .chipfilter { padding: 8px 12px; }
 
   /* --- cards --- */
-  /* Exactly two columns, not auto-fill. auto-fill with a 154px floor silently
-     collapses to ONE column at 320px, because two of them plus the gap need
-     322px and an iPhone SE only has 288px of content width. Two columns of
-     whatever fits is right at every phone size. */
+  /* Exactly two columns, not auto-fill: a 154px floor collapses to ONE column at 320px, because two plus the gap need 322px. */
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
   .card { border-radius: var(--radius-sm); }
   .card__body { padding: 11px 12px 13px; gap: 5px; }
@@ -1808,8 +1680,7 @@ body.is-suggesting .suggestions {
   .card__badge { top: 9px; left: 9px; padding: 4px 9px 4px 7px; font-size: 9.5px; }
   .card__soon { top: 8px; right: 8px; font-size: 9px; padding: 4px 7px; }
 
-  /* No hover on a touch screen, so the (i) is the only way in and has to be
-     big enough to hit. */
+  /* No hover on a touch screen, so the (i) is the only way in and has to be big enough to hit. */
   .card__note { width: 32px; height: 32px; }
 
   .sections { gap: 30px; }
@@ -1823,8 +1694,7 @@ body.is-suggesting .suggestions {
   .loadmore { margin-top: 26px; }
 
   /* --- browse drawer --- */
-  /* Nearly full width, and clear of the home indicator at the bottom - the
-     Apply button sat under it on an iPhone. */
+  /* Nearly full width, and clear of the home indicator - the Apply button sat under it on an iPhone. */
   .panel { width: min(400px, 92vw); }
   .panel__body { gap: 14px; padding: 16px; }
   .panelfield select { padding: 13px; }
@@ -1841,10 +1711,7 @@ body.is-suggesting .suggestions {
   .detail__section { margin-top: 24px; }
   .detail__overview { font-size: 14.5px; line-height: 1.65; }
   .detail__close { top: 12px; right: 12px; width: 36px; height: 36px; }
-  /* Two buttons, each the full width of the sheet - the same shape the
-     library's own popup uses. The official site is the one that goes: it is a
-     marketing page, while the trailer and the TMDB record are the two things
-     anyone actually opens this modal to reach. */
+  /* Two full-width buttons, the shape the library's own popup uses. The official site goes: it is a marketing page, unlike the trailer and the TMDB record. */
   .detail__action--site { display: none; }
   .detail__actions { flex-direction: column; align-items: stretch; gap: 9px; }
   .btn-primary-solid,
@@ -1858,10 +1725,7 @@ body.is-suggesting .suggestions {
   .similar-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   .season-row { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
 
-  /* The library page's own phone rules are NOT here - see the block at the
-     bottom of this file. Its base styles are declared after this media query,
-     and at equal specificity the later rule wins at every width, so overrides
-     written up here were being silently undone. */
+  /* The library page's own phone rules are NOT here - see the block at the bottom of this file, where its base styles are declared. */
 
   .footer { padding: 24px 0 32px; }
   .footer__inner { flex-direction: column; text-align: center; gap: 12px; }
@@ -1876,9 +1740,7 @@ body.is-suggesting .suggestions {
 
   .grid { gap: 11px; }
   .card__body { padding: 10px 11px 12px; }
-  /* At this width the overview is two lines of about four words each, which
-     is noise rather than a summary. The title, year and rating still say
-     everything a card is for, and the modal has the full text. */
+  /* At this width the overview is two lines of four words, which is noise; the title, year and rating still say what a card is for. */
   .card__overview { display: none; }
   .card__genres { gap: 4px; }
 
@@ -1922,9 +1784,7 @@ body.is-suggesting .suggestions {
 }
 
 /* --- wordmark gloss --- */
-/* "Decouverte de films" is French for "Movie Discovery". The translation is
-   one hover away rather than printed permanently, so it explains without
-   cluttering. */
+/* "Decouverte de films" is French for "Movie Discovery" - one hover away rather than printed permanently. */
 .wordmark { position: relative; }
 
 .wordmark__gloss {
@@ -1954,11 +1814,7 @@ body.is-suggesting .suggestions {
   transform: translateY(0);
 }
 
-/* The name is long, so it steps down before it can collide with the tools,
-   and below that it drops to the short form entirely. The arithmetic: at
-   360px the row has 328px to spend, of which the hamburger and the three
-   tool buttons already claim ~156px. "Decouverte de films." does not fit in
-   what is left at any readable size; "Decouverte." does. */
+/* The name steps down before it can collide with the tools: at 360px the row has 328px and the hamburger plus three tool buttons claim ~156px. */
 @media (max-width: 560px) {
   .wordmark__text { font-size: 15px; }
   .wordmark__gloss { display: none; }
@@ -1969,25 +1825,17 @@ body.is-suggesting .suggestions {
   .wordmark__brief { display: inline; }
 }
 
-/* =========================================================================
-   THE WATCHED LIBRARY PAGE
-   Search asks "have I seen this". This page asks "what have I seen", and the
-   shape of the collection is the headline answer - which is why the numbers
-   come before the grid rather than sitting in a tooltip.
-   ========================================================================= */
+/* === THE WATCHED LIBRARY PAGE: search asks "have I seen this", this page asks "what have I seen", so the numbers come before the grid === */
 
 .libhero {
-  /* The .wash gradient is fixed with z-index 0, so it paints over any static
-     content beneath it. .hero and .results both opt out the same way. Without
-     this the whole stats bar renders and is then covered by the background. */
+  /* .wash is fixed at z-index 0 and paints over static content, so this opts out the same way .hero and .results do. */
   position: relative;
   z-index: 1;
   padding: 46px 0 26px;
   text-align: center;
 }
 
-.stat { display: flex; flex-direction: column; gap: 5px; }/* A bar rather than a percentage label: the relative sizes are the point,
-   and four numbers competing with four other numbers reads as noise. *//* --- controls and facets --- */.facets {
+.stat { display: flex; flex-direction: column; gap: 5px; }/* A bar rather than percentage labels: the relative sizes are the point, and four numbers against four others reads as noise. *//* --- controls and facets --- */.facets {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -2009,15 +1857,8 @@ body.is-suggesting .suggestions {
   background: var(--accent-tint);
   border-color: var(--accent);
   color: var(--accent-deep);
-}/* The phone twin of the chip row. Hidden on desktop, where fifty chips are a
-   good way to see the whole shape of a collection at a glance - and unusable
-   on a phone, where the same fifty bury the grid under several screens of
-   scrolling before a single poster appears. */
-/* The phone twin of the chip row: one bordered control that carries its own
-   caption, the value and the caret. The border lives here rather than on the
-   <select> so the caption sits inside it - a loose label floating above the
-   box reads as a leftover from the desktop layout, which is exactly what it
-   would have been. */
+}/* The phone twin of the chip row. Fifty chips show a collection's shape on a desktop and bury the grid on a phone. */
+/* One bordered control carrying its own caption, the value and the caret. The border is here rather than on the <select> so the caption sits inside it. */
 .facets__picker {
   position: relative;
   display: none;
@@ -2035,8 +1876,7 @@ body.is-suggesting .suggestions {
   -webkit-appearance: none;
   flex: 1 1 auto;
   min-width: 0;
-  /* Transparent and borderless: the picker around it is the visible control,
-     and a second border inside the first looked like a mistake. */
+  /* Transparent and borderless: the picker around it is the visible control, and a second border inside the first looked like a mistake. */
   background: transparent;
   border: 0;
   outline: none;
@@ -2068,9 +1908,7 @@ body.is-suggesting .suggestions {
   stroke-linecap: round;
   stroke-linejoin: round;
   pointer-events: none;
-}/* --- the leaner library card ---
-   No rating, runtime or overview: the sheet does not hold them, and printing
-   "Not rated yet" a thousand times would be noise dressed as information. */
+}/* --- the leaner library card: no rating, runtime or overview, because the sheet does not hold them --- */
 
 .card--lib .card__body {
   display: flex;
@@ -2079,24 +1917,11 @@ body.is-suggesting .suggestions {
   padding: 14px 15px 16px;
 }
 
-.card--lib .card__facts { margin: 0; }/* --- library page on phones ---
-   Deliberately down here, not up in the main phone block. Everything above
-   `.libcontrols` in this file is shared with the search page, but the library
-   page's own base styles are declared BELOW that media query - and two rules
-   of equal specificity are settled by which comes last in the file, not by
-   which is inside a media query. Overrides written in the earlier block were
-   being quietly reverted by the base rules further down, which is why the
-   chips and the loose Category/Genre labels kept surviving on a phone. */
-@media (max-width: 767px) {  /* The desktop copy of the group name, which sat in the gutter beside the
-     chips. Each picker now carries its own caption, and two of them is one
-     too many. */
+.card--lib .card__facts { margin: 0; }/* --- library page on phones. Down here on purpose: its base styles are declared BELOW the main phone block, and at equal specificity the later rule wins at every width. --- */
+@media (max-width: 767px) {  /* The desktop copy of the group name, which sat in the gutter beside the chips. Each picker carries its own caption now. */
   .facets__label { display: none; }
 
-  /* The two pickers become one card with a divider between them, the way a
-     phone's own settings list looks. Grouping them is what guarantees they
-     are the same width: as separate boxes they were each sized by their own
-     contents, so "Category" and "Genre" - different words, different values -
-     came out visibly different widths and read as a mistake. */
+  /* Two pickers as one card with a divider, which is also what guarantees they are the same width - separately they were sized by their own contents. */
   .facets {
     gap: 0;
     margin-bottom: 18px;
@@ -2107,15 +1932,11 @@ body.is-suggesting .suggestions {
     overflow: hidden;
   }
 
-  /* `display: block` on purpose. The base rule is a flex row with
-     align-items: flex-start, which is what shrank each picker to its content
-     in the first place. */
-  .facets__group { display: block; }  /* The whole row lights up when its filter is doing something, so it is
-     obvious at a glance which of the two is narrowing the grid. */
+  /* `display: block` on purpose: the base rule is a flex row with align-items:flex-start, which is what shrank each picker to its content. */
+  .facets__group { display: block; }  /* The whole row lights up when its filter is doing something, so it is obvious which of the two is narrowing the grid. */
   .facets__picker.is-on { background: var(--accent-tint); }  .facets__picker.is-on .facets__pickerlabel { color: var(--accent-deep); }
 
-  /* 16px, not 15. iOS zooms the page whenever a focused control is under
-     16px and never zooms back out, and a <select> counts. */
+  /* 16px, not 15: iOS zooms the page whenever a focused control is under 16px and never zooms back out, and a <select> counts. */
   .facets__select {
     font-size: 16px;
     font-weight: 600;
@@ -2124,8 +1945,7 @@ body.is-suggesting .suggestions {
   .facets__picker.is-on .facets__select { color: var(--accent-deep); }
   .facets__picker.is-on .facets__caret { stroke: var(--accent); }
 
-  /* Focus is drawn as an inset ring rather than a border, which the card's
-     own rounded edge would otherwise clip in half. */
+  /* Focus is an inset ring rather than a border, which the card's own rounded edge would otherwise clip in half. */
   .facets__picker:focus-within { background: var(--accent-tint); }
 }
 
@@ -2142,15 +1962,9 @@ body.is-suggesting .suggestions {
 }
 
 
-/* =========================================================================
-   WRITING BACK - card buttons, the identity gate, and toasts
-   ========================================================================= */
+/* === WRITING BACK - card buttons, the identity gate, and toasts === */
 
-/* --- the buttons on a card ---
-   Bottom of the poster, over a gradient so they stay legible against a bright
-   still. Always rendered, whether or not anyone is signed in: clicking one as
-   a visitor opens the explanation of whose list this is, which is a better
-   answer than a control that was never there. */
+/* --- the buttons on a card: bottom of the poster over a gradient, always rendered, because clicking one as a visitor explains whose list this is --- */
 .cardacts {
   position: absolute;
   left: 0;
@@ -2162,9 +1976,7 @@ body.is-suggesting .suggestions {
   padding: 22px 8px 8px;
   background: linear-gradient(to top,
               rgba(var(--shade-rgb), 0.72), rgba(var(--shade-rgb), 0));
-  /* Off until the card is hovered or focused on a pointer device, so a wall
-     of posters is not also a wall of buttons. Overridden to always-on for
-     touch, further down. */
+  /* Off until the card is hovered or focused on a pointer device, so a wall of posters is not also a wall of buttons. */
   opacity: 0;
   transform: translateY(6px);
   transition: opacity 0.18s var(--ease), transform 0.18s var(--ease);
@@ -2203,8 +2015,7 @@ body.is-suggesting .suggestions {
 .cardact:active { transform: scale(0.94); }
 .cardact:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
 
-/* An engaged flag fills its icon as well as colouring it - colour alone is
-   the one signal some people cannot read. */
+/* An engaged flag fills its icon as well as colouring it - colour alone is the one signal some people cannot read. */
 .cardact.is-on svg { fill: currentColor; }
 .cardact--watched.is-on   { background: var(--seen); border-color: var(--seen); }
 .cardact--watchlist.is-on { background: var(--accent); border-color: var(--accent); }
@@ -2214,15 +2025,9 @@ body.is-suggesting .suggestions {
 /* The watched tick is not a fill, so it needs its own rule. */
 .cardact--watched.is-on svg { fill: none; }
 
-/* In flight. The whole card dims rather than one button, because a write can
-   change several flags at once. */
-/* A save in flight must not look like a broken card. The old rule faded this
-   to 62% and switched off pointer events, which is the visual language of
-   broken - so a working 1-2s write read as a hang. The card now stays fully
-   legible; only the pressed button spins. */
-/* Only the button being pressed goes inert. Blocking the whole card meant you
-   could not queue a second change while the first was in flight, and blocking
-   the grid made the page feel frozen for the second the bridge takes. */
+/* In flight. The whole card dims rather than one button, because a write can change several flags at once. */
+/* A save in flight must not look like a broken card: the old rule faded this to 62% and killed pointer events, which is the visual language of broken. */
+/* Only the pressed button goes inert. Blocking the whole card stopped a second change being queued while the first was in flight. */
 .card.is-saving { pointer-events: auto; }
 .card.is-saving .card__poster::after {
   content: "";
@@ -2245,8 +2050,7 @@ body.is-suggesting .suggestions {
 .gate {
   position: fixed;
   inset: 0;
-  /* Above Bootstrap's modal (1055) and its backdrop (1050), so a dialog is
-     never buried mid-fade by a modal on its way out. */
+  /* Above Bootstrap's modal (1055) and backdrop (1050), so a dialog is never buried mid-fade by a modal on its way out. */
   z-index: 1200;
   display: flex;
   align-items: center;
@@ -2386,9 +2190,7 @@ body.gate-open { overflow: hidden; }
 }
 .askflag input { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; }
 
-/* --- toasts ---
-   Bottom centre, above everything, and out of the way of a thumb reaching the
-   buttons that produce them. */
+/* --- toasts: bottom centre, above everything, and clear of a thumb reaching the buttons that produce them --- */
 .toast {
   position: fixed;
   left: 50%;
@@ -2422,8 +2224,7 @@ body.gate-open { overflow: hidden; }
   .gate__panel { padding: 24px 20px 20px; }
   .gate__title { font-size: 19px; }
   .gate__text { font-size: 14px; margin-bottom: 18px; }
-  /* Stacked and reversed, so the affirmative sits under the thumb rather
-     than the one that backs out. */
+  /* Stacked and reversed, so the affirmative sits under the thumb rather than the one that backs out. */
   .gate__actions { flex-direction: column-reverse; }
   .cardact { height: 33px; }
   .cardact svg { width: 14px; height: 14px; }
@@ -2433,23 +2234,18 @@ body.gate-open { overflow: hidden; }
 
 
 @media (max-width: 767px) {
-    /* Three even columns, so the row reads as one control rather than three
-     pills of whatever width their labels happened to need. */
+    /* Three even columns, so the row reads as one control rather than three pills of whatever width their labels needed. */
     }
 
 
-/* --- saving and toasts ------------------------------------------------------
-   Appended at the end of the file on purpose. At equal specificity the later
-   rule wins at every width, so anything added above the library phone block
-   would be silently reverted by it. Keep new rules down here. */
+/* --- saving and toasts. Appended on purpose: at equal specificity the later rule wins, so anything above the library phone block would be reverted by it. --- */
 
 @keyframes sc-breathe {
   0%, 100% { opacity: 0.35; }
   50%      { opacity: 0.85; }
 }
 
-/* The pressed button, mid-write. The icon is replaced by a ring so the control
-   reports its own state rather than relying on a strip elsewhere on screen. */
+/* The pressed button mid-write: the icon is replaced by a ring so the control reports its own state. */
 .cardact.is-working { position: relative; pointer-events: none; }
 .cardact.is-working svg { opacity: 0; }
 .cardact.is-working::after {
@@ -2511,8 +2307,7 @@ body.gate-open { overflow: hidden; }
   stroke-linejoin: round;
 }
 
-/* Pending is the state that matters. It has to move, or the toast is just a
-   label on a frozen screen. */
+/* Pending is the state that matters. It has to move, or the toast is just a label on a frozen screen. */
 .toast__spin {
   width: 15px;
   height: 15px;
@@ -2543,11 +2338,7 @@ body.gate-open { overflow: hidden; }
 
 
 /* --- collection page shell --- */
-/* Positioned and ranked, or .wash paints over it. .wash is fixed, 760px tall
-   and OPAQUE, and a positioned element at z-index 0 paints above non-positioned
-   content - so the title, the counts and the view pills were veiled and the top
-   of the page read as a blank band. Every top-level region needs a rank:
-   .topbar 60, .hero 20, .results 1, .coll 1, .footer 1. */
+/* Positioned and ranked, or .wash paints over it. Every top-level region needs a rank: .topbar 60, .hero 20, .results 1, .coll 1, .footer 1. */
 .coll {
   position: relative;
   z-index: 1;
@@ -2605,8 +2396,7 @@ body.gate-open { overflow: hidden; }
   border: 0;
   background: none;
   color: var(--ink);
-  /* 16px, not 15px. iOS zooms on any focused control under 16px and never zooms
-     back out. Easy to reintroduce by tidying this down. */
+  /* 16px, not 15px: iOS zooms on any focused control under 16px and never zooms back out. Easy to reintroduce by tidying this down. */
   font-size: 16px;
   font-family: var(--font-body);
   padding: 11px 0;
@@ -2647,12 +2437,7 @@ body.gate-open { overflow: hidden; }
 }
 
 
-/* ============================================================================
-   The pieces the JS renders. Everything below is appended on purpose: the
-   library phone block sits ~270 lines above, and at equal specificity the later
-   rule wins at every width, so anything added higher up gets silently reverted.
-   New rules go here.
-   ============================================================================ */
+/* === The pieces the JS renders. Appended on purpose: the library phone block sits ~270 lines above and the later rule wins at every width. New rules go here. === */
 
 /* --- result sections --- */
 .sect { margin-bottom: 40px; }
@@ -2885,8 +2670,7 @@ body.gate-open { overflow: hidden; }
 }
 .askflag input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
 
-/* Body scroll is locked while any dialog or the browse drawer is open, or the
-   page behind scrolls under the panel on a phone. */
+/* Body scroll is locked while any dialog or the browse drawer is open, or the page behind scrolls under the panel on a phone. */
 body.panel-open { overflow: hidden; }
 
 @media (max-width: 767px) {
@@ -2894,8 +2678,7 @@ body.panel-open { overflow: hidden; }
   .sect__head { font-size: 17px; }
   .detail__people { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
   .detail__similars { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
-    /* 16px, not 15px. iOS zooms on any focused control below it and never zooms
-     back out. */
+    /* 16px, not 15px: iOS zooms on any focused control below it and never zooms back out. */
   .gate__input, .gate__select, .facets__select { font-size: 16px; }
 }
 
@@ -2906,8 +2689,7 @@ body.panel-open { overflow: hidden; }
   max-width: 56ch;
 }
 
-/* The browse control moved out of the leading slot and in with the tools, so it
-   needs the count badge the hamburger used to carry. */
+/* The browse control moved in with the tools, so it needs the count badge the hamburger used to carry. */
 .icon-btn__count {
   position: absolute;
   top: -3px;
@@ -2953,10 +2735,7 @@ body.panel-open { overflow: hidden; }
 }
 
 
-/* ============================================================================
-   Navbar state, the card menu, and the collection header.
-   Appended, for the cascade reason at the top of the previous block.
-   ============================================================================ */
+/* === Navbar state, the card menu, and the collection header. Appended, for the cascade reason above. === */
 
 /* --- you are here --- */
 .icon-btn.is-current {
@@ -3021,8 +2800,7 @@ body.panel-open { overflow: hidden; }
 [data-theme="dark"] .stat--fav .stat__n { color: #ff9dc0; }
 [data-theme="dark"] .stat--must .stat__n { color: #e8bd6a; }
 
-/* The split by industry as proportions. "450 Hollywood, 300 Bollywood" makes
-   the reader do that arithmetic; a bar does it for them. */
+/* The split by industry as proportions: "450 Hollywood, 300 Bollywood" makes the reader do that arithmetic, a bar does it for them. */
 .split { margin-top: 16px; }
 
 .split__track {
@@ -3069,8 +2847,7 @@ body.panel-open { overflow: hidden; }
 .collbar__search { background: var(--tint); border-color: var(--line); }
 .collbar__search:focus-within { border-color: var(--accent); background: var(--card); }
 
-/* The picker, not the select, is the visible control - but it needs to look
-   like one. It read as plain text against the page before this. */
+/* The picker, not the select, is the visible control - but it has to look like one, and it read as plain text before this. */
 .facets--inline .facets__wrap {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -3106,9 +2883,7 @@ body.panel-open { overflow: hidden; }
 }
 
 
-/* ============================================================================
-   Stacking, the floating card menu, and the mobile pass.
-   ============================================================================ */
+/* === Stacking, the floating card menu, and the mobile pass. === */
 
 .cardmenu { position: absolute; right: 8px; bottom: 8px; z-index: 4; }
 
@@ -3129,10 +2904,7 @@ body.panel-open { overflow: hidden; }
 .cardmenu__item.cardact--watched.is-on svg { stroke: var(--seen); }
 .cardmenu__item.cardact--watchlist.is-on svg { fill: var(--gold); stroke: var(--gold); }
 
-/* --- one row, one height ---------------------------------------------------
-   The search field and the three pickers are a single control strip, and they
-   read as one only if they line up. 46px, set on both, rather than left to
-   whatever padding each happened to have. */
+/* --- one row, one height: the search field and the three pickers are one control strip, so 46px is set on both rather than left to padding --- */
 .collbar { align-items: flex-end; }
 .collbar__search { height: 46px; padding: 0 14px; }
 .collbar__search input { padding: 0; height: 100%; }
@@ -3141,9 +2913,7 @@ body.panel-open { overflow: hidden; }
 .facets--inline .facets__select { padding: 0; height: 100%; }
 .collbar__count { margin-bottom: 14px; }
 
-/* --- the browse drawer's pickers ------------------------------------------
-   These were transparent on a transparent panel and read as plain text. The
-   wrapper is the control now, and it looks like one. */
+/* --- the browse drawer's pickers: transparent on a transparent panel read as plain text, so the wrapper is the control now --- */
 .panel__body .facets { gap: 7px; margin-bottom: 15px; }
 
 .panel__body .facets__label {
@@ -3176,14 +2946,11 @@ body.panel-open { overflow: hidden; }
   padding: 0;
   text-align: left;
   text-align-last: left;
-  /* 16px, never lower. iOS zooms on any focused control under it and never
-     zooms back out; a select counts. */
+  /* 16px, never lower: iOS zooms on any focused control under it and never zooms back out, and a select counts. */
   font-size: 16px;
 }
 
-/* --- the trailer / IMDb / TMDB row ----------------------------------------
-   These are the only actions in the modal, so they should look like actions.
-   They had been reduced to plain bordered text. */
+/* --- the trailer / IMDb / TMDB row: the only actions in the modal, so they should look like actions rather than bordered text --- */
 .detail__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 
 .btn-solid,
@@ -3221,10 +2988,7 @@ body.panel-open { overflow: hidden; }
 
 .btn-solid svg, .detail__actions .btn-outline svg { width: 16px; height: 16px; }
 
-/* --- the modal close button ------------------------------------------------
-   It sat on the backdrop image at z-index 5 and vanished against a light
-   poster, worst of all on a phone where the hero fills the top of the screen.
-   It gets its own surface and outranks the hero. */
+/* --- the modal close button: at z-index 5 on the backdrop image it vanished against a light poster, so it gets its own surface --- */
 .detail__close {
   z-index: 30;
   background: rgba(0, 0, 0, 0.55);
@@ -3236,10 +3000,7 @@ body.panel-open { overflow: hidden; }
 .detail__close svg { stroke: currentColor; }
 .detail__close:hover { background: rgba(0, 0, 0, 0.78); }
 
-/* ============================================================================
-   Phones. Everything above is sized for a pointer; this is the pass that makes
-   it fit a 360px screen.
-   ============================================================================ */
+/* === Phones. Everything above is sized for a pointer; this is the pass that makes it fit a 360px screen. === */
 @media (max-width: 767px) {
   .coll { padding-top: 14px; }
   .coll__title { font-size: clamp(22px, 6.4vw, 28px); }
@@ -3267,8 +3028,7 @@ body.panel-open { overflow: hidden; }
   .cardmenu__layer { min-width: 0; width: min(240px, calc(100vw - 20px)); padding: 5px; }
   .cardmenu__item { padding: 9px 10px; font-size: 12.5px; gap: 8px; }
 
-  /* "Remove from watchlist" is the longest label and was pushing the icon out
-     of the row entirely. It wraps now, and the icon holds its width. */
+  /* "Remove from watchlist" is the longest label and pushed the icon out of the row; it wraps now and the icon holds its width. */
   .cardmenu__item span { white-space: normal; }
 
   .detail__close { top: 10px; right: 10px; width: 34px; height: 34px; }
@@ -3295,15 +3055,9 @@ body.panel-open { overflow: hidden; }
 }
 
 
-/* ============================================================================
-   Flag marks, the collection header, and the modal action row.
-   ============================================================================ */
+/* === Flag marks, the collection header, and the modal action row. === */
 
-/* --- the collection header, centred ---------------------------------------
-   The heading, the lead and the numbers are the page introducing itself, and a
-   centred column reads as an introduction where a left rail reads as the start
-   of a form. Bounded, because a lead line running the full width of a desktop
-   monitor is not a line anyone finishes. */
+/* --- the collection header, centred: the page introducing itself, bounded because a lead line running a full monitor is not one anyone finishes --- */
 .coll__head {
   max-width: 720px;
   margin: 0 auto 22px;
@@ -3345,8 +3099,7 @@ body.panel-open { overflow: hidden; }
   color: var(--ink-soft);
 }
 
-/* Bounded and centred, so five tiles do not stretch to 1800px and turn into a
-   row of mostly whitespace. */
+/* Bounded and centred, so five tiles do not stretch to 1800px and turn into a row of mostly whitespace. */
 .stats {
   max-width: 660px;
   margin: 22px auto 0;
@@ -3376,9 +3129,7 @@ body.panel-open { overflow: hidden; }
   .stat__n { font-size: 20px; }
 }
 
-/* --- the modal action row --------------------------------------------------
-   Four pills wrapped one-per-line on a phone and read as a stack of unrelated
-   links. Two columns keeps it a row of actions. */
+/* --- the modal action row: four pills wrapped one-per-line on a phone and read as a stack of unrelated links --- */
 @media (max-width: 599px) {
   .detail__actions {
     display: grid;
@@ -3389,25 +3140,18 @@ body.panel-open { overflow: hidden; }
     width: 100%;
     justify-content: center;
     padding: 0 10px;
-    /* The labels are short but "Official site" is not, and a pill that clips its
-       own label is worse than one that shrinks its text. */
+    /* The labels are short but "Official site" is not, and a pill that clips its own label is worse than one that shrinks its text. */
     font-size: 12px;
     white-space: nowrap;
   }
-  /* An odd count leaves a gap; the trailer is the primary action, so it takes
-     the full width rather than sitting beside a hole. */
+  /* An odd count leaves a gap, and the trailer is the primary action, so it takes the full width rather than sitting beside a hole. */
   .detail__actions > .btn-solid:first-child:nth-last-child(odd) { grid-column: 1 / -1; }
 }
 
 
-/* ============================================================================
-   The card action bar, and the browse drawer moved to the right.
-   ============================================================================ */
+/* === The card action bar, and the browse drawer moved to the right. === */
 
-/* The bottom row of a card, in the space the TMDB rating used to occupy.
-   Favourite and Must watch on the left for a watched title; Watchlist on the
-   right for one that is not. Filled means on, so the state is the icon rather
-   than something you have to open a menu to read. */
+/* The bottom row of a card, where the TMDB rating used to be. Filled means on, so the state is the icon rather than something you open a menu to read. */
 .cardbar {
   display: flex;
   align-items: center;
@@ -3473,10 +3217,7 @@ body.panel-open { overflow: hidden; }
 /* Mid-write. The button keeps its shape so the row does not reflow. */
 .cardbar__btn.is-working { pointer-events: none; opacity: 0.55; }
 
-/* --- the browse drawer, now on the right ----------------------------------
-   It opens from the same side as the button that summons it. Reaching across
-   the whole width to a panel that arrives from the far edge is a small thing
-   that reads as wrong every time. */
+/* --- the browse drawer, now on the right: it opens from the same side as the button that summons it --- */
 .panel {
   right: 0;
   left: auto;
@@ -3492,9 +3233,7 @@ body.panel-open { overflow: hidden; }
   .cardbar__btn svg { width: 15px; height: 15px; }
 }
 
-/* --- the modal action row --------------------------------------------------
-   The trailer is the one thing anyone came for, so it takes the whole first
-   row; the three reference links share the second. */
+/* --- the modal action row: the trailer takes the whole first row, the three reference links share the second --- */
 @media (max-width: 599px) {
   .detail__actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .detail__actions > .btn-solid { grid-column: 1 / -1; }
@@ -3507,8 +3246,7 @@ body.panel-open { overflow: hidden; }
   }
 }
 
-/* Last in the row, and set apart: it opens a drawer rather than navigating, so
-   it should not read as another destination. */
+/* Last in the row and set apart: it opens a drawer rather than navigating, so it should not read as another destination. */
 .icon-btn--browse { position: relative; margin-left: 4px; }
 .icon-btn--browse::before {
   content: "";
@@ -3522,15 +3260,7 @@ body.panel-open { overflow: hidden; }
 }
 
 
-/* ============================================================================
-   One card height for every card.
-   ============================================================================
-   A grid where every card is a different height reads as broken even when each
-   one is individually fine, and the eye cannot scan a row whose baselines move.
-   Every text block below is therefore bounded to a known number of lines, and
-   grid-auto-rows: 1fr makes every row of the grid match the tallest card in it.
-   The action bar is pushed to the bottom with margin-top:auto, so a card with a
-   short title has more whitespace above the bar rather than a shorter body. */
+/* === One card height for every card: every text block is line-bounded and grid-auto-rows:1fr matches each row to its tallest card. === */
 
 .grid { grid-auto-rows: 1fr; }
 
@@ -3543,10 +3273,7 @@ body.panel-open { overflow: hidden; }
   min-height: 0;
 }
 
-/* Scrolled sideways rather than wrapped or truncated: a long title is still
-   readable, and the row keeps its height. No visible scrollbar - the overflow is
-   a fallback, not a control, and a 4px bar under every second title would be
-   more noise than the titles it serves. */
+/* Scrolled sideways rather than wrapped or truncated, with no visible scrollbar - the overflow is a fallback, not a control. */
 .card__scroll {
   overflow-x: auto;
   overflow-y: hidden;
@@ -3590,8 +3317,7 @@ body.panel-open { overflow: hidden; }
 }
 .card__genre { flex: 0 0 auto; }
 
-/* Three lines, then an ellipsis. The whole thing is in the modal, which is where
-   anyone reading past three lines is heading anyway. */
+/* Three lines, then an ellipsis. The whole thing is in the modal, which is where anyone reading past three lines is heading. */
 .card__overview {
   flex: 0 0 auto;
   display: -webkit-box;
@@ -3607,15 +3333,11 @@ body.panel-open { overflow: hidden; }
 
 @media (max-width: 767px) {
   .card__genres { height: 24px; }
-  /* Two lines on a phone: the card is narrower, so three lines of a 13px face
-     eats more of it than it earns. */
+  /* Two lines on a phone: the card is narrower, so three lines of a 13px face eats more of it than it earns. */
   .card__overview { -webkit-line-clamp: 2; height: 3em; }
 }
 
-/* Green means watched, everywhere in this app - the card border, the badge, and
-   now the tick. Without its own rule the filled tick inherited the row's muted
-   grey, so the one state the whole app is built around was the only one that did
-   not announce itself. */
+/* Green means watched everywhere in this app. Without its own rule the filled tick inherited the row's muted grey - the one state the app is built around, not announcing itself. */
 .cardbar__btn--watched.is-on {
   border-color: var(--seen);
   background: var(--seen-tint);
@@ -3625,17 +3347,12 @@ body.panel-open { overflow: hidden; }
 
 [data-theme="dark"] .cardbar__btn--watched.is-on { color: var(--seen-bar); }
 
-/* ============================================================================
-   The detail modal: numbers grid, circular cast, trailer.
-   ============================================================================ */
+/* === The detail modal: numbers grid, circular cast, trailer. === */
 
-/* The TMDB score, in the facts line rather than a tile of its own - it is the
-   one number people read before deciding. */
+/* The TMDB score, in the facts line rather than a tile of its own - it is the one number people read before deciding. */
 .detail__rate { color: var(--gold-ink); font-weight: 700; }
 
-/* Label above value, in a grid that keeps its shape between titles. A cell that
-   disappears when TMDB has no figure makes every title a different layout; an em
-   dash says the same thing and holds the row. */
+/* Label above value, in a grid that keeps its shape between titles: a cell that disappears when TMDB has no figure makes every title a different layout. */
 .detail__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -3668,8 +3385,7 @@ body.panel-open { overflow: hidden; }
   font-weight: 600;
   line-height: 1.35;
   color: var(--ink);
-  /* Long director credits and "$115,000,000" both live here, so it wraps rather
-     than pushing the grid wider. */
+  /* Long director credits and "$115,000,000" both live here, so it wraps rather than pushing the grid wider. */
   overflow-wrap: anywhere;
 }
 
@@ -3677,30 +3393,19 @@ body.panel-open { overflow: hidden; }
 
 
 @media (max-width: 599px) {
-  /* Two columns, so a six-cell grid is three tidy rows rather than six thin
-     ones or two cramped ones. */
+  /* Two columns, so a six-cell grid is three tidy rows rather than six thin ones or two cramped ones. */
   .detail__grid { grid-template-columns: 1fr 1fr; }
   .detail__cell { padding: 11px 13px; gap: 5px; }
   .detail__cell-val { font-size: 13.5px; }
 
-  /* minmax(0, ...), never a bare 1fr. `1fr` is `minmax(auto, 1fr)` and that auto
-     minimum is the item's min-content width - the longest unbreakable word in
-     it. A cast list is nothing but those ("Brahmanandam", "Balasubramanian"), so
-     a track holding one was floored at the width of that word, the others shared
-     what was left, and the faces - width:100% of their track on a phone -
-     inherited the unevenness. See the block at the foot of this file. */
+  /* minmax(0, ...), never a bare 1fr: `1fr` is `minmax(auto, 1fr)` and that auto minimum is the longest unbreakable word in the item. See the block at the foot of this file. */
   .detail__people { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
   .detail__person-name { font-size: 11px; }
   .detail__person-role { font-size: 10.5px; }
 
 }
 
-/* --- cast faces ------------------------------------------------------------
-   A circle cut from a 2:3 headshot. object-position matters more than anything
-   else here: centring the crop puts the middle of the torso in the circle and
-   slices the top of every head off, because TMDB profile shots are framed
-   head-and-shoulders with the face high in the frame. 20% down is where faces
-   actually sit. */
+/* --- cast faces: a circle cut from a 2:3 headshot. object-position 20% is where faces sit, because TMDB frames profiles head-and-shoulders with the face high. --- */
 .detail__face {
   position: relative;
   display: grid;
@@ -3723,10 +3428,7 @@ body.panel-open { overflow: hidden; }
   object-position: 50% 20%;
 }
 
-/* Behind the photo, so a missing OR broken image reveals it with no scripting.
-   One neutral treatment rather than a colour per person: green and gold already
-   mean watched and must-watch everywhere else, and borrowing them for decoration
-   would spend meaning that is already committed. */
+/* Behind the photo, so a missing OR broken image reveals it with no scripting. One neutral treatment, because green and gold are already spent on watched and must-watch. */
 .detail__face-ini {
   font-family: var(--font-display);
   font-size: 25px;
@@ -3736,10 +3438,7 @@ body.panel-open { overflow: hidden; }
   user-select: none;
 }
 
-/* --- the trailer -----------------------------------------------------------
-   The close button lives on a bar ABOVE the frame. Inside it, it landed on
-   YouTube's own settings and fullscreen controls in the same corner, and either
-   could be hit by mistake. */
+/* --- the trailer: the close button lives on a bar ABOVE the frame, or it lands on YouTube's own settings and fullscreen controls --- */
 .detail__trailer {
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -3798,9 +3497,7 @@ body.panel-open { overflow: hidden; }
 }
 
 @media (max-width: 599px) {
-  /* Trailer across the top, the reference links sharing the row beneath. Three
-     columns because IMDb, TMDB and Official site is the usual set; with only two
-     of them present they simply take two of the three tracks. */
+  /* Trailer across the top, the reference links sharing the row beneath. Three columns for IMDb, TMDB and Official site. */
   .detail__actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .detail__actions > .btn-solid { grid-column: 1 / -1; }
   .detail__actions > * {
@@ -3818,11 +3515,7 @@ body.panel-open { overflow: hidden; }
   .detail__trailer-close { width: 34px; height: 34px; }
 }
 
-/* --- no poster, no placeholder --------------------------------------------
-   The title stands in for missing artwork. A generic film-reel graphic says
-   nothing; the title says exactly which film TMDB has no image for. Rendered
-   behind the <img> in every case, so a dead URL reveals it too - an image with
-   an empty alt draws nothing when it fails. */
+/* --- no poster, no placeholder: the title stands in for missing artwork, rendered behind the <img> so a dead URL reveals it too --- */
 .detail__poster-alt,
 .detail__similar-alt {
   padding: 14px;
@@ -3843,34 +3536,9 @@ body.panel-open { overflow: hidden; }
 }
 
 
-/* ============================================================================
-   Mobile: the navbar was wider than the phone.
-   ============================================================================
-   This is what the dark band down the right side was. Nothing was "extra space" -
-   the topbar simply did not fit, so the DOCUMENT became wider than the viewport
-   and every full-width section below it was laid out against the document, not
-   the screen.
+/* === Mobile: the navbar outgrew the phone, so the DOCUMENT outgrew the viewport - that was the dark band down the right. The wordmark text goes (~114px), buttons shrink, and .topbar__tools scrolls as a last resort. === */
 
-   The arithmetic on a 360px phone, before this block:
-     wrap padding      32
-     wordmark          25 + 9 gap + ~105 of text  = 139
-     seven buttons     7 x 36 = 252, plus 6 x 7 gaps = 42
-                                                   -----
-                                                     465   on a 360px screen
-
-   Three things fix it, in order of how much they buy:
-
-   1. The wordmark text goes. The mark stays as the way home, which is what a
-      logo is for, and that is ~114px recovered - more than the other two
-      together. It also keeps all four destinations visible, which matters more
-      on a phone than the brand does.
-   2. Smaller buttons and tighter gaps.
-   3. A last-resort scroll on the icon row itself. If some future button pushes
-      it over again, the row scrolls and the PAGE does not - a scrollable strip
-      is a small annoyance, a horizontally scrolling page is the band above. */
-
-/* overflow-x: clip, not hidden. `hidden` on body makes it a scroll container and
-   the sticky topbar stops sticking; `clip` just clips. */
+/* overflow-x: clip, not hidden - `hidden` on body makes it a scroll container and the sticky topbar stops sticking. */
 body { overflow-x: clip; }
 
 @media (max-width: 600px) {
@@ -3896,9 +3564,7 @@ body { overflow-x: clip; }
   .icon-btn { width: 34px; height: 34px; flex: 0 0 34px; }
   .icon-btn svg { width: 17px; height: 17px; }
 
-  /* The hairline before the browse button costs 8px of a budget that has none,
-     and with no text labels the row no longer reads as destinations-then-tools
-     anyway. */
+  /* The hairline before browse costs 8px of a budget that has none, and with no labels the row no longer reads as destinations-then-tools anyway. */
   .icon-btn--browse { margin-left: 0; }
   .icon-btn--browse::before { display: none; }
 }
@@ -3911,13 +3577,9 @@ body { overflow-x: clip; }
   .wordmark__mark { width: 30px; height: 30px; }
 }
 
-/* --- the rest of the phone layout -----------------------------------------
-   Nothing was broken here, it was just loose: the result toolbar took three
-   stacked rows before the first poster, which on a 640px-tall screen is most of
-   the fold spent on controls. */
+/* --- the rest of the phone layout: nothing was broken, just loose - the result toolbar took three stacked rows before the first poster --- */
 @media (max-width: 600px) {
-  /* Filter and sort share a row. .sortfield was on 100% width, which forced a
-     second row for one dropdown. */
+  /* Filter and sort share a row. .sortfield was on 100% width, which forced a second row for one dropdown. */
   .toolbar__controls { margin-top: 13px; gap: 8px; flex-wrap: nowrap; align-items: center; }
   .segmented { flex: 1 1 auto; min-width: 0; }
   .segmented__btn { padding: 8px 6px; font-size: 12px; }
@@ -3942,16 +3604,7 @@ body { overflow-x: clip; }
   .footer__line { font-size: 13px; }
 }
 
-/* --- the watchlist tag ----------------------------------------------------
-   Green means watched everywhere in this app, and gold already means queued -
-   it is the colour of the bookmark in the card bar and of the .is-listed ring
-   round the poster. The corner tag borrows it rather than introducing a third
-   meaning.
-
-   At the BOTTOM of the file on purpose: the phone block for .card__badge is
-   ~600 lines above, and at equal specificity the later rule wins at every
-   width, so anything written up there would be reverted here rather than the
-   other way round. New rules go here. */
+/* --- the watchlist tag: gold already means queued, so the corner tag borrows it. At the BOTTOM of the file, because .card__badge's phone block is ~600 lines above. --- */
 .card__badge--listed {
   background: var(--gold);
   color: #fff;
@@ -3972,16 +3625,7 @@ body { overflow-x: clip; }
   stroke: none;
 }
 
-/* --- the collections dropdown ---------------------------------------------
-   On a phone the four destinations become one control. Four unlabelled glyphs
-   in a row named nothing, and the label-drop breakpoint is exactly where they
-   stopped naming anything - so that is where the dropdown takes over.
-
-   The list is position:fixed and lives on <body>, placed by js/ui/nav.js from
-   the trigger's own box. It cannot be absolute inside the header: below 600px
-   .topbar__tools carries overflow-x:auto as its last-resort scroller and would
-   clip it away, and .topbar has backdrop-filter, which makes it the containing
-   block for anything fixed inside it. */
+/* --- the collections dropdown: four unlabelled glyphs named nothing, so they become one control. Fixed on <body>, or .topbar__tools clips it. --- */
 .navmenu { position: relative; display: none; }
 
 .navmenu__caret {
@@ -4045,23 +3689,16 @@ body { overflow-x: clip; }
 }
 
 @media (max-width: 720px) {
-  /* The row of four goes; the one control that replaces them arrives. Both are
-     always in the DOM - swapping them with a resize listener would mean
-     re-binding on every breakpoint crossing for a few hundred bytes of markup. */
+  /* The row of four goes and the one control replacing them arrives. Both stay in the DOM - a resize listener would re-bind on every breakpoint crossing. */
   .topbar__tools > .icon-btn--label { display: none; }
   .navmenu { display: block; }
 
-  /* The label stays on THIS one, because naming where you are is the entire
-     reason the dropdown exists. */
+  /* The label stays on THIS one, because naming where you are is the entire reason the dropdown exists. */
   .navmenu .icon-btn--label { width: auto; padding: 0 9px 0 11px; gap: 7px; }
   .navmenu .icon-btn--label .icon-btn__text { display: inline; font-size: 12.5px; }
 }
 
-/* --- the reload button answers for itself ---------------------------------
-   It was wired on one page of three, so on the other two a click did nothing
-   at all - and a control that answers with silence gets clicked again. Now the
-   arrows spin while the read is in flight and settle to a tick afterwards,
-   with the toast carrying the count. */
+/* --- the reload button answers for itself: the arrows spin while the read is in flight and settle to a tick afterwards, with the toast carrying the count --- */
 .icon-btn__arrows,
 .icon-btn__done {
   grid-area: 1 / 1;
@@ -4074,54 +3711,32 @@ body { overflow-x: clip; }
 /* Only the arrows spin. The tick is not a progress indicator. */
 .icon-btn--refresh.is-busy .icon-btn__done { animation: none; }
 
-/* The pip means "something you did has not been re-read yet", so it is absent
-   by default rather than a permanent green dot on the button. A reload is
-   exactly the thing that answers it. */
+/* The pip means "something you did has not been re-read yet", so it is absent by default rather than a permanent green dot. */
 .icon-btn__dot { display: none; }
 .icon-btn__dot.is-on { display: block; }
 
-/* --- phone: the controls above the grid -----------------------------------
-   Smaller by PADDING, never by font-size. Every one of these is a focusable
-   form control, and iOS zooms the whole page when one under 16px takes focus
-   and never zooms back out - so the text stays at 16 and the box shrinks
-   around it. */
+/* --- phone: the controls above the grid. Smaller by PADDING, never font-size - iOS zooms the page when a focused control under 16px takes focus. --- */
 @media (max-width: 600px) {
-  /* The label above the control, which is not focusable and so is free to be
-     as small as it reads. */
+  /* The label above the control, which is not focusable and so is free to be as small as it reads. */
   .scopepick__label { font-size: 8.5px; letter-spacing: 0.08em; }
   .scopepick { gap: 7px; }
   .scopepick__select { padding: 6px 22px 6px 11px; }
   .scopepick__caret { right: 9px; width: 13px; height: 13px; margin-top: -6.5px; }
 
-  /* Buttons, not fields. Nothing zooms when a button takes focus, so these are
-     the one part of the row whose TEXT can come down with the box. */
+  /* Buttons, not fields: nothing zooms when a button takes focus, so these are the one part of the row whose TEXT can come down with the box. */
   .segmented__btn { padding: 6px 4px; font-size: 10.5px; letter-spacing: 0; }
   .segmented { border-radius: 999px; }
 
   .sortfield { gap: 6px; }
   .sortfield select {
     padding: 6px 12px;
-    /* The text is SCALED, not set smaller.
-       font-size stays 16px because iOS zooms the page whenever a focused
-       select is under that and never zooms back out - the computed value is
-       what Safari reads, and a transform does not change it. scale() shrinks
-       what is drawn, which is what was actually asked for.
-       The layout box keeps its full size, so the origin decides where the
-       slack lands: on the right, the pill shrinks toward the row's edge and
-       the gap opens between it and the segmented buttons, where a gap already
-       was. */
+    /* The text is SCALED, not set smaller: font-size stays 16px because Safari reads the computed value and a transform does not change it. The origin decides where the layout slack lands. */
     font-size: 16px;
     transform: scale(0.82);
     transform-origin: right center;
   }
 
-  /* --- the library toolbar ---
-     Every label, caret and count shrinks. The two SELECTS and the search field
-     keep their 16px text and lose padding instead: iOS zooms the page whenever
-     a focused input or select is under 16px and never zooms back, and that is
-     the single worst thing that can happen to this page on a phone. If these
-     still read too large, the next lever is the width of .facets__label, not
-     the type inside the control. */
+  /* --- the library toolbar: every label, caret and count shrinks, but the two selects and the search field keep 16px text and lose padding instead --- */
   .collbar { gap: 8px; padding-bottom: 14px; }
   .facets__label { width: auto; font-size: 8.5px; letter-spacing: 0.08em; padding-top: 0; }
   .facets--inline .facets__wrap { padding: 0 28px 0 10px; }
@@ -4135,9 +3750,7 @@ body { overflow-x: clip; }
   .collbar__count { font-size: 10.5px; margin-bottom: 0; }
 }
 
-/* --- the portrait ---------------------------------------------------------
-   "me" in the footer is a button, and it looks like the word it replaced with
-   an underline under it - a link's affordance, not a button's box. */
+/* --- the portrait: "me" in the footer is a button that looks like the word it replaced, with a link's affordance rather than a box --- */
 .footer__me {
   appearance: none;
   border: 0;
@@ -4145,9 +3758,7 @@ body { overflow-x: clip; }
   background: none;
   font: inherit;
   color: var(--accent-deep);
-  /* Heavier than the line it sits in and no underline: the capitals and the
-     weight are enough to say it is pressable, and an underline in a footer
-     reads as one more link to the same page everything else links to. */
+  /* Heavier than the line it sits in and no underline: the capitals and the weight are enough to say it is pressable. */
   font-weight: 800;
   letter-spacing: 0.02em;
   cursor: pointer;
@@ -4178,8 +3789,7 @@ body { overflow-x: clip; }
 }
 .portrait.is-open .portrait__backdrop { opacity: 1; }
 
-/* Up from the bottom, which is where the trigger is - the panel arrives from
-   the direction the click came from rather than dropping in from nowhere. */
+/* Up from the bottom, which is where the trigger is - the panel arrives from the direction the click came from. */
 .portrait__panel {
   position: relative;
   z-index: 1;
@@ -4212,8 +3822,7 @@ body { overflow-x: clip; }
   color: var(--ink-soft);
 }
 
-/* On the panel and above the photograph's corner, not inside the image: the
-   same reason the trailer's close button sits on its own bar. */
+/* On the panel and above the photograph's corner, not inside the image: the same reason the trailer's close button sits on its own bar. */
 .portrait__close {
   position: absolute;
   top: -14px;
@@ -4248,19 +3857,13 @@ body.portrait-open { overflow: hidden; }
   .portrait__close { top: -10px; right: -6px; }
 }
 
-/* A slide is decoration. Anyone who has asked not to see one still gets the
-   photograph, it simply appears. */
+/* A slide is decoration. Anyone who has asked not to see one still gets the photograph, it simply appears. */
 @media (prefers-reduced-motion: reduce) {
   .portrait__panel { transition: opacity 0.2s; transform: none; }
   .navmenu__list { animation: none; }
 }
 
-/* --- one height for the two controls above the grid -----------------------
-   The status buttons and the sort dropdown are one row and have to read as
-   one, and they never quite did: the segmented control is a padded box around
-   padded buttons (~43px) while the select was padded once (~37px), so they sat
-   six pixels apart at every width. Both take an explicit height now and the
-   padding only decides the sides. */
+/* --- one height for the two controls above the grid: the segmented control is ~43px and the select was ~37px, so both take an explicit height now --- */
 :root { --row-h: 44px; }
 
 .toolbar__controls .segmented {
@@ -4283,17 +3886,13 @@ body.portrait-open { overflow: hidden; }
 @media (max-width: 600px) {
   :root {
     --row-h: 38px;
-    /* How much smaller the sort dropdown's text is drawn. Named because the
-       height below has to divide by exactly the same number. */
+    /* How much smaller the sort dropdown's text is drawn. Named because the height below has to divide by exactly the same number. */
     --sort-scale: 0.82;
   }
 
   .toolbar__controls .segmented__btn { padding: 0 6px; }
 
-  /* The height is set PRE-scale, so what is drawn ends up at --row-h and
-     matches the buttons beside it: (h / s) * s = h. The layout box is the tall
-     one, and the negative margin gives back exactly the difference so the row
-     does not grow around a control that is not using the space. */
+  /* The height is set PRE-scale, so what is drawn ends up at --row-h: (h / s) * s = h. The negative margin gives back the difference so the row does not grow. */
   .sortfield select {
     height: calc(var(--row-h) / var(--sort-scale));
     padding: 0 14px;
@@ -4303,11 +3902,7 @@ body.portrait-open { overflow: hidden; }
     margin-block: calc((var(--row-h) - var(--row-h) / var(--sort-scale)) / 2);
   }
 
-  /* The same treatment for "Search by", for the same reason: the text is drawn
-     smaller while the computed font-size stays at 16, which is the value
-     Safari reads when the control takes focus. The origin is the right edge
-     because .scopepick__caret is positioned against the row rather than the
-     select - hold that edge still and the caret stays where it was. */
+  /* The same treatment for "Search by": drawn smaller while the computed font-size stays 16. The origin is the right edge, because .scopepick__caret is positioned against the row. */
   .scopepick__select {
     font-size: 16px;
     transform: scale(0.9);
@@ -4315,38 +3910,13 @@ body.portrait-open { overflow: hidden; }
   }
 }
 
-/* --- the cast grid: equal tracks, equal faces -------------------------------
-   `repeat(4, 1fr)` is `repeat(4, minmax(auto, 1fr))`, and that auto minimum is
-   the item's MIN-CONTENT width - the longest unbreakable word inside it. A cast
-   list is nothing but long unbreakable words: "Brahmanandam",
-   "Balasubramanian", "Bhagavan". Any track holding one was floored at the width
-   of that word and the remaining space was shared out among the rest, so the
-   four tracks came back wildly uneven; when the words together beat the
-   container the whole grid overflowed the modal and the longest names were
-   clipped at the right edge.
-
-   .detail__face is sized off its own track on a phone (width:100%), so an
-   uneven track drew an uneven circle - which is the visible half of the bug: a
-   small Prabhu beside a large Sonu Sood, the same photo pipeline for both.
-
-   minmax(0, 1fr) removes the floor. Four equal tracks, always, whatever the
-   names say. The names then have to be allowed to break, because with the floor
-   gone a word wider than its track paints over its neighbour instead of pushing
-   it out - the same fix .detail__cell-val already carries for "$115,000,000".
-   Both halves are asserted in css.test.mjs. */
+/* --- the cast grid: a bare 1fr is minmax(auto, 1fr), and that auto floor is the longest unbreakable word, so "Balasubramanian" drew uneven tracks. minmax(0, 1fr) removes it; the names then have to break. --- */
 .detail__person { min-width: 0; }
 
-/* Two lines of name are reserved whether or not they are used, so the character
-   names underneath sit on one baseline across a row instead of stepping up and
-   down with the length of the actor above them. 2.6em is two lines at the 1.3
-   line-height declared above, and it follows the font-size down on a phone
-   without being restated. */
+/* Two lines of name are reserved whether used or not, so character names sit on one baseline across a row. 2.6em is two lines at the 1.3 line-height above. */
 .detail__person-name { min-width: 0; overflow-wrap: anywhere; min-height: 2.6em; }
 
-/* The character is the one line here with no natural bound - "Sakthi Swaroop &
-   Rudra", "Jalbhushan / Jolly No. 2" - and the least load-bearing of the two.
-   Two lines and an ellipsis, so one long role cannot set the height of every
-   card in its row. The actor's name is never clamped: it wraps in full. */
+/* The character is the one line with no natural bound, and the least load-bearing of the two, so it clamps at two. The actor's name is never clamped. */
 .detail__person-role {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -4356,9 +3926,49 @@ body.portrait-open { overflow: hidden; }
   overflow: hidden;
 }
 
-/* Capped as well as fluid. The track is now reliably even, so this is belt and
-   braces - but it also stops the circles growing to 100px each on a wide phone,
-   which is bigger than the poster thumbnails beside them. */
+/* Capped as well as fluid: the track is reliably even now, but this also stops the circles growing past the poster thumbnails beside them. */
 @media (max-width: 767px) {
   .detail__face { width: min(100%, 76px); height: auto; aspect-ratio: 1; }
+}
+
+/* --- the duplicate report, ?dupes=1 on the library page. A maintenance view over the sheet, so deliberately plain. At the bottom of the file like everything else. --- */
+.dupes {
+  margin: 0 0 22px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+}
+
+.dupes__lead {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+
+.dupes__list {
+  margin: 14px 0 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.dupes__item {
+  font-size: 0.88rem;
+  color: var(--ink);
+  /* An id or a normalised key is a long unbreakable word, and this sits in a grid track with no minimum of its own. */
+  overflow-wrap: anywhere;
+}
+
+.dupes__why {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin-bottom: 4px;
+}
+
+.dupes__row b {
+  display: inline-block;
+  min-width: 62px;
+  color: var(--ink-soft);
+  font-weight: 600;
 }

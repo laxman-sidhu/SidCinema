@@ -33,13 +33,7 @@ export async function discover(options = {}) {
     if (found) params.with_companies = String(found);
   }
 
-  // A COMMA is an AND on TMDB and a pipe is an OR. "Akshay Kumar and Suniel
-  // Shetty movies" means both are in it, so the comma is the whole feature:
-  // with_cast=976,85034 returns the films they actually share.
-  //
-  // /discover/tv has no people parameter at all - the id lives on the credit,
-  // not the show - so a series co-star search cannot come through here. The
-  // caller intersects two filmographies instead.
+  // A COMMA is an AND on TMDB and a pipe is an OR, so with_cast=976,85034 is the whole feature. /discover/tv has no people parameter at all.
   const people = (options.withPeople || []).map(Number).filter(Boolean);
   if (people.length && !isTv) {
     params[options.crewToo ? "with_people" : "with_cast"] = people.join(",");
@@ -61,10 +55,7 @@ export async function discover(options = {}) {
   const regional = tmdb.isRegional(options.language);
   const sort = options.sort;
 
-  // Two names ANDed together is already the narrowest filter TMDB has: a
-  // co-star list is a handful of films, and a 300-vote floor on top of it
-  // returns an empty page. The caller sorts these client-side instead, over a
-  // set small enough that sorting it exactly costs nothing.
+  // No vote floor on top of an AND: a co-star list is a handful of films and a 300-vote floor empties it, so the caller sorts client-side.
   const peopleFiltered = people.length > 0 && !isTv;
 
   if (peopleFiltered) {
@@ -85,8 +76,7 @@ export async function discover(options = {}) {
     params.sort_by = "popularity.desc";
   }
 
-  // A rating floor without a vote floor is meaningless: a single 10/10 vote
-  // would outrank a classic, so the two always travel together.
+  // A rating floor without a vote floor is meaningless - a single 10/10 vote would outrank a classic.
   if (options.minRating && !peopleFiltered) {
     params["vote_average.gte"] = options.minRating;
     params["vote_count.gte"] = Math.max(
@@ -135,8 +125,7 @@ export async function similarTitles(itemId, media = MOVIE) {
   return items.slice(0, RELATED_LIMIT);
 }
 
-// A title search appends titles related to its top match, flagged so the UI can
-// give them their own section rather than passing them off as matches.
+// A title search appends titles related to its top match, flagged so the UI can section them separately.
 export async function titleSearch(query, media = MOVIE, { withRelated = true } = {}) {
   const matches = await searchTitles(query, media);
   if (!matches.length) return { seed: null, items: [] };
@@ -156,14 +145,7 @@ export async function titleSearch(query, media = MOVIE, { withRelated = true } =
   return { seed, items: [...matches, ...related] };
 }
 
-/**
- * The first genre TMDB gives this title, for a card that arrived without any.
- *
- * A list endpoint returns genre_ids and the client maps them, but a credit list
- * or a stripped-down feed sometimes carries neither - and the Genre column in
- * the sheet is typed into by hand and grouped by, so an empty one is a row that
- * quietly drops out of every genre filter later.
- */
+// The first genre TMDB gives this title, for a card that arrived without any - a blank Genre column drops out of every filter later.
 export async function firstGenre(itemId, media = MOVIE) {
   if (!itemId) return "";
   try {
@@ -241,8 +223,7 @@ async function personCredits(personId, role = null, media = MOVIE) {
 
   const items = await tmdb.pack(raw, kind);
   return items.sort((a, b) => {
-    // Lead roles first, then by popularity. An uncredited cameo should not head
-    // an actor's filmography just because the film did well.
+    // Lead roles first, then popularity: an uncredited cameo should not head a filmography.
     const aLead = a.order !== null && a.order <= 3 ? 0 : 1;
     const bLead = b.order !== null && b.order <= 3 ? 0 : 1;
     if (aLead !== bLead) return aLead - bLead;
@@ -258,20 +239,7 @@ export async function personFilmography(personId, role, media = MOVIE) {
   }
 }
 
-/**
- * What two or more people worked on TOGETHER, from their credit lists.
- *
- * The long way round, and the only way for series: /discover/tv has no people
- * parameter, so a co-star search there has to be an intersection computed here.
- * It is also the safety net for films, because with_cast indexes billed cast
- * only - a director-and-actor pairing appears in the credits and not in the
- * discover index.
- *
- * An empty intersection is returned as empty. Falling back to the union would
- * answer a question nobody asked: "films with both of them" and "films with
- * either of them" are different searches, and quietly swapping one for the
- * other is worse than saying there are none.
- */
+// What two or more people worked on TOGETHER: the only way for series, and the safety net for films. An empty intersection stays empty, because the union answers a different question.
 export async function sharedFilmography(personIds, role = null, media = MOVIE) {
   const ids = [...new Set((personIds || []).map(Number).filter(Boolean))];
   if (ids.length < 2) return [];
@@ -323,8 +291,7 @@ function needsExtras(item) {
   return !item.runtime && item.media_type === MOVIE;
 }
 
-// Runtimes cost one call per title, so only the visible top of a list is
-// enriched and the rest keeps whatever the list endpoint gave.
+// Runtimes cost one call per title, so only the visible top of a list is enriched.
 export async function enrichDetails(items) {
   const targets = items.slice(0, ENRICH_LIMIT).filter(needsExtras);
   if (!targets.length) return items;

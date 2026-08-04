@@ -129,6 +129,9 @@ If you ever want the password to be a real boundary, the change is small and liv
 7. Troubleshooting
 ------------------
 
+For debug switches rather than setup problems - ?dupes=1, the console
+snippets, checkSetup() and cleanWatchlist() - see assets/DEBUGGING.txt.
+
 Nothing loads, and the console says CORS.
     The Apps Script deployment is not set to "Anyone", or APPS_SCRIPT_URL is
     wrong. Open the /exec URL directly in a browser: it should answer with

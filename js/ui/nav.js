@@ -1,23 +1,4 @@
-// One navbar for all three pages.
-//
-// Previously each page hand-wrote its own, and they disagreed: the library had
-// no Favourites link, so getting from Must watch to Favourites meant going back
-// to the search page first. Building it from one list means adding a destination
-// is a change in one place and every page gets it.
-//
-// Every destination stays visible on every page. An earlier version dropped the
-// entry for the page you were on, which is tidy but wrong for a navbar: the row
-// changed shape as you moved, and nothing told you where you were. The current
-// page is marked instead, and its own entry becomes inert.
-//
-// There is no Search entry. The wordmark is the way back to the search page,
-// which is what a wordmark is for, and one fewer icon leaves room for the four
-// collections to keep their labels on a narrow screen.
-//
-// The wordmark sits first and left-aligned. The browse control is last, at the
-// far right, and the drawer it opens slides in from that same edge - reaching
-// across the width to a panel arriving from the opposite side reads as wrong
-// every time.
+// One navbar for all three pages, from one list. Every destination stays visible and the current one is marked rather than hidden; the wordmark is the way back to search.
 
 import * as toast from "./toast.js";
 
@@ -54,8 +35,7 @@ const LINKS = [
   }
 ];
 
-// Which entry is the page you are on. The library link and its two views share
-// one page, so the view in the URL decides between them.
+// Which entry is the page you are on. The library link and its two views share one page, so the URL decides between them.
 function currentKey() {
   const file = window.location.pathname.split("/").pop() || "index.html";
   if (file === "" || file === "index.html") return "search";
@@ -77,8 +57,7 @@ export function paintNav({ browse = false } = {}) {
 
   const links = LINKS.map(link => {
     const current = link.key === here;
-    // aria-current is what a screen reader announces; the class is what the eye
-    // reads. Both are needed, and neither substitutes for the other.
+    // aria-current is what a screen reader announces and the class is what the eye reads; neither substitutes for the other.
     return `<a class="icon-btn icon-btn--label${current ? " is-current" : ""}" `
       + `href="${link.href}" title="${link.title}"`
       + (current ? ' aria-current="page"' : "")
@@ -86,17 +65,7 @@ export function paintNav({ browse = false } = {}) {
       + `<span class="icon-btn__text">${link.label}</span></a>`;
   }).join("");
 
-  // The same four destinations, folded into one control for a narrow screen.
-  //
-  // Seven buttons and a wordmark needed 465px on a 360px phone, and the fix so
-  // far was shrinking everything: labels off, buttons down to 32px, four icons
-  // that named nothing. Four unlabelled glyphs in a row is a guessing game, so
-  // on a phone they become one button that says where you are and opens a menu
-  // that says where you could go.
-  //
-  // Both are in the DOM and CSS shows one. A resize listener that swapped them
-  // would have to re-bind on every breakpoint crossing, and the markup is a few
-  // hundred bytes.
+  // The same four destinations folded into one control on a narrow screen, because four unlabelled glyphs name nothing. Both layouts stay in the DOM and CSS shows one.
   const here_link = LINKS.find(link => link.key === here);
   const menuItems = LINKS.map(link => {
     const current = link.key === here;
@@ -117,13 +86,7 @@ export function paintNav({ browse = false } = {}) {
     + `<div class="navmenu__list" id="navMenuList" role="menu" hidden>${menuItems}</div>`
     + "</div>";
 
-  // The list is built here and then LIVES ON <body>. Below 600px
-  // .topbar__tools carries overflow-x:auto as its own last-resort scroller, and
-  // an overflow container clips a dropdown inside it to nothing - the same trap
-  // the card menu hit, with the same answer. .topbar also has backdrop-filter,
-  // which makes it the containing block for anything fixed inside it, so the
-  // menu has to leave the header entirely rather than merely be positioned
-  // against it.
+  // The list LIVES ON <body>: .topbar__tools has overflow-x and .topbar has backdrop-filter, either of which would clip or trap it.
 
   // Only the search page has a catalogue to browse, so only it gets the control.
   const browseBtn = browse
@@ -134,9 +97,7 @@ export function paintNav({ browse = false } = {}) {
       + '<span class="icon-btn__count" id="filterCount" hidden>0</span></button>'
     : "";
 
-  // Both glyphs are mounted and CSS shows one, so settling to the tick is a
-  // class change rather than a re-render - and a re-render would lose the
-  // listener bound to the old button.
+  // Both glyphs are mounted and CSS shows one, so settling to the tick is a class change rather than a re-render that would lose the listener.
   const refresh = '<button class="icon-btn icon-btn--refresh" id="refreshBtn" type="button" '
     + 'aria-label="Reload from the sheet" title="Reload from the sheet">'
     + '<span class="icon-btn__dot" id="libraryDot"></span>'
@@ -156,14 +117,11 @@ export function paintNav({ browse = false } = {}) {
     + '<path d="M20.5 14.6A8.6 8.6 0 0 1 9.4 3.5a8.6 8.6 0 1 0 11.1 11.1Z"/>'
     + "</svg></button>";
 
-  // Order is the same at both widths: destinations, then the two tools, then
-  // browse at the far right beside the drawer it opens.
-  // A previous paint's menu, before the new one is built. paintNav runs again
-  // on every view change, and two menus on <body> would leave a stale one
-  // pointing at a trigger that no longer exists.
+  // A previous paint's menu: paintNav runs again on every view change, and a stale one would point at a trigger that no longer exists.
   const stale = document.getElementById("navMenuList");
   if (stale && stale.parentNode && stale.parentNode !== host) stale.remove();
 
+  // Order is the same at both widths: destinations, the two tools, then browse at the far right beside the drawer it opens.
   host.innerHTML = menu + links + refresh + theme + browseBtn;
 
   const list = host.querySelector ? host.querySelector("#navMenuList") : null;
@@ -172,8 +130,7 @@ export function paintNav({ browse = false } = {}) {
   wireNavMenu();
 }
 
-// Under the trigger, measured rather than assumed: the header is 68px on a
-// desktop and 58px on a phone, and it moves again inside a notch.
+// Under the trigger, measured rather than assumed: the header is 68px on desktop and 58px on a phone, and moves again inside a notch.
 function placeNavMenu() {
   const trigger = document.getElementById("navMenuBtn");
   const list = document.getElementById("navMenuList");
@@ -184,9 +141,7 @@ function placeNavMenu() {
   list.style.left = `${Math.round(box.left)}px`;
 }
 
-// Opened and closed from the document, not from the button: paintNav() replaces
-// the trigger whenever the view changes, and a listener bound to the old
-// element would be lost the first time it was used.
+// Bound to the document, not the button: paintNav() replaces the trigger whenever the view changes.
 let menuWired = false;
 
 function wireNavMenu() {
@@ -215,8 +170,7 @@ function wireNavMenu() {
     event.preventDefault();
     const open = trigger.getAttribute("aria-expanded") === "true";
     trigger.setAttribute("aria-expanded", open ? "false" : "true");
-    // Placed before it is shown, or the first frame lands in the top left
-    // corner and slides across.
+    // Placed before it is shown, or the first frame lands in the top left corner and slides across.
     if (!open) placeNavMenu();
     list.hidden = open;
   });
@@ -225,28 +179,12 @@ function wireNavMenu() {
     if (event.key === "Escape") close();
   });
 
-  // A menu anchored to a bar that has moved is worse than no menu, so both of
-  // these close it rather than trying to follow.
+  // A menu anchored to a bar that has moved is worse than no menu, so both of these close it.
   window.addEventListener("resize", close);
   window.addEventListener("scroll", close, { passive: true });
 }
 
-// The reload button, on every page rather than one.
-//
-// It was only wired on the search page. On the library and the watchlist it was
-// a button that did nothing at all - and a control that answers a click with
-// silence gets clicked again, which is exactly what happened: several reloads
-// where one was meant.
-//
-// So it reports three times over, because one signal is easy to miss on a phone
-// and the whole complaint was not knowing whether anything happened:
-//
-//   the icon spins for as long as the read is in flight
-//   it settles to a tick for a moment afterwards
-//   a toast names what came back - "Reloaded - 1,013 watched, 29 queued"
-//
-// And it refuses a second click while the first is still running, so an
-// impatient double tap cannot start two reads.
+// The reload button, on every page rather than one. It reports three times - spinner, tick, toast - and refuses a second click while the first read is in flight.
 export function wireRefresh(job) {
   const button = document.getElementById("refreshBtn");
   if (!button || typeof job !== "function") return;
@@ -266,14 +204,11 @@ export function wireRefresh(job) {
       const summary = await job();
       note.succeed(summary || "Reloaded from the sheet");
 
-      // A tick where the arrows were, for a moment. The toast is the detail;
-      // this is the control answering for itself, which is what the eye was
-      // already looking at when it clicked.
+      // A tick where the arrows were, for a moment: the control answering for itself.
       button.classList.add("is-done");
       setTimeout(() => button.classList.remove("is-done"), 1600);
 
-      // The pip means "the sheet has moved since this page loaded". It has just
-      // been caught up with, so it has nothing left to say.
+      // The pip means "the sheet has moved since this page loaded", and it has just been caught up with.
       const dot = document.getElementById("libraryDot");
       if (dot) dot.classList.remove("is-on");
     } catch (error) {
