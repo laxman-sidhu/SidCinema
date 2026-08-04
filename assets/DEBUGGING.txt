@@ -1,157 +1,163 @@
-SidCinema - debugging
-=====================
+# SidCinema - debugging
 
-Every debug switch and check in one place. Nothing here changes the sheet.
-For setup problems - CORS, bad tokens, a bridge that will not answer - see
-section 7 of SETUP.txt instead.
-
+Every debug switch and check in one place. Nothing here changes the sheet. For setup problems - CORS, bad tokens, a bridge that will not answer - see section 7 of SETUP.txt instead.
 
 1. URL switches
----------------
 
-?dupes=1        on watched.html
+---
 
-    Why the page and the sheet disagree about how many titles there are.
+?dupes=1 on watched.html
 
-    The page counts DISTINCT TITLES; the sheet counts ROWS. firstSeen() in
-    js/data/identity.js collapses any two rows sharing a TMDB id or a title and
-    year, because a re-watch is one title and the per-industry buckets have to
-    sum to the total rather than exceed it. So 1,043 rows can be 1,042 titles,
-    and Bollywood can read one short of its own column with nothing saying why.
+Why the page and the sheet disagree about how many titles there are.
 
-    This lists every collapse above the grid: the row that was dropped, the row
-    it merged into, and the key they had in common. The key is the diagnosis:
+The page counts DISTINCT TITLES; the sheet counts ROWS. firstSeen() in js/data/identity.js collapses any two rows sharing a TMDB id or a title and year, because a re-watch is one title and the per-industry buckets have to sum to the total rather than exceed it. So 1,043 rows can be 1,042 titles, and Bollywood can read one short of its own column with nothing saying why.
 
-        id:20453        a TMDB id was pasted onto two different rows
-        t:ved|2022      two rows agree on title and year
+This lists every collapse above the grid: the row that was dropped, the row it merged into, and the key they had in common. The key is the diagnosis:
 
-    An id clash is a typo - fix the wrong id and the count corrects itself. A
-    title+year clash is either a genuine second entry for one film (delete the
-    spare row) or two different films sharing a title and a release year, which
-    is the accepted cost of title-plus-year identity. Compare the two TMDB ids
-    at themoviedb.org/movie/<id> to tell them apart.
+```
+id:20453        a TMDB id was pasted onto two different rows
+t:ved|2022      two rows agree on title and year
+```
 
-    Example:
+An id clash is a typo - fix the wrong id and the count corrects itself. A title+year clash is either a genuine second entry for one film (delete the spare row) or two different films sharing a title and a release year, which is the accepted cost of title-plus-year identity. Compare the two TMDB ids at themoviedb.org/movie/<id> to tell them apart.
 
-        https://laxman-sidhu.github.io/SidCinema/watched.html?dupes=1
+Example:
 
-    Add it with & rather than ? when the URL already has a query:
+```
+https://laxman-sidhu.github.io/SidCinema/watched.html?dupes=1
+```
 
-        watched.html?view=favorite&dupes=1
+Add it with & rather than ? when the URL already has a query:
 
-?view=favorite  on watched.html, and ?view=must_watch
-    Not a debug switch - the library's two flag views. Listed here because it
-    is the reason ?dupes=1 sometimes needs an & instead of a ?.
+```
+watched.html?view=favorite&dupes=1
+```
 
+?view=favorite on watched.html, and ?view=must_watch
+
+Not a debug switch - the library's two flag views. Listed here because it is the reason ?dupes=1 sometimes needs an & instead of a ?.
 
 2. From the browser console
----------------------------
 
-The last read of the sheet is in localStorage, so these need no deploy and no
-network. Open the page, press F12, use the Console tab.
+---
+
+The last read of the sheet is in localStorage, so these need no deploy and no network. Open the page, press F12, use the Console tab.
 
 What the site last read:
 
-    JSON.parse(localStorage.getItem("sidcinema-snapshot-watched-v2")).rows.length
-    JSON.parse(localStorage.getItem("sidcinema-snapshot-watchlist-v2")).rows.length
+```
+JSON.parse(localStorage.getItem("sidcinema-snapshot-watched-v2")).rows.length
+JSON.parse(localStorage.getItem("sidcinema-snapshot-watchlist-v2")).rows.length
+```
 
 Force a cold read, discarding the snapshot:
 
-    Object.keys(localStorage).filter(k => k.startsWith("sidcinema-snapshot-"))
-      .forEach(k => localStorage.removeItem(k)); location.reload();
+```
+Object.keys(localStorage).filter(k => k.startsWith("sidcinema-snapshot-"))
+  .forEach(k => localStorage.removeItem(k)); location.reload();
+```
 
 Sign out of the owner session:
 
-    localStorage.removeItem("sidcinema-owner"); location.reload();
+```
+localStorage.removeItem("sidcinema-owner"); location.reload();
+```
 
 Clear the in-session TMDB cache, so the next search really hits the network:
 
-    sessionStorage.clear();
+```
+sessionStorage.clear();
+```
 
-The duplicate report without deploying anything - the same de-duplication the
-page runs, over the same rows:
+The duplicate report without deploying anything - the same de-duplication the page runs, over the same rows:
 
-    (() => {
-      const packed = JSON.parse(localStorage.getItem("sidcinema-snapshot-watched-v2") || "null");
-      if (!packed) return console.log("No snapshot. Reload watched.html once, then run this again.");
-      const norm = t => !t ? "" : String(t).normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
-      const num = v => { const m = String(v ?? "").replace(/,/g, "").match(/\d+/); return m ? +m[0] : null; };
-      const keysOf = r => {
-        const out = [], y = num(r.year), id = num(r.tmdb_id);
-        if (id !== null) out.push("id:" + id);
-        for (const t of [r.og_title, r.name]) {
-          const n = norm(t); if (!n) continue;
-          const k = "t:" + n + "|" + (y === null ? "" : y);
-          if (!out.includes(k)) out.push(k);
-        }
-        return out;
-      };
-      const seen = new Map(), hits = [];
-      for (const r of packed.rows) {
-        const ks = keysOf(r); if (!ks.length) continue;
-        const clash = ks.find(k => seen.has(k));
-        if (clash !== undefined) hits.push({ key: clash, dropped: r, kept: seen.get(clash) });
-        else for (const k of ks) seen.set(k, r);
-      }
-      console.log(`${packed.rows.length} rows, ${packed.rows.length - hits.length} titles, ${hits.length} collapsed.`);
-      console.table(hits.map(h => ({
-        key: h.key,
-        dropped: `${h.dropped.name} (${h.dropped.year}) [${h.dropped.industry}] id=${h.dropped.tmdb_id}`,
-        kept: `${h.kept.name} (${h.kept.year}) [${h.kept.industry}] id=${h.kept.tmdb_id}`
-      })));
-    })();
+```
+(() => {
+  const packed = JSON.parse(localStorage.getItem("sidcinema-snapshot-watched-v2") || "null");
+  if (!packed) return console.log("No snapshot. Reload watched.html once, then run this again.");
+  const norm = t => !t ? "" : String(t).normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
+  const num = v => { const m = String(v ?? "").replace(/,/g, "").match(/\d+/); return m ? +m[0] : null; };
+  const keysOf = r => {
+    const out = [], y = num(r.year), id = num(r.tmdb_id);
+    if (id !== null) out.push("id:" + id);
+    for (const t of [r.og_title, r.name]) {
+      const n = norm(t); if (!n) continue;
+      const k = "t:" + n + "|" + (y === null ? "" : y);
+      if (!out.includes(k)) out.push(k);
+    }
+    return out;
+  };
+  const seen = new Map(), hits = [];
+  for (const r of packed.rows) {
+    const ks = keysOf(r); if (!ks.length) continue;
+    const clash = ks.find(k => seen.has(k));
+    if (clash !== undefined) hits.push({ key: clash, dropped: r, kept: seen.get(clash) });
+    else for (const k of ks) seen.set(k, r);
+  }
+  console.log(`${packed.rows.length} rows, ${packed.rows.length - hits.length} titles, ${hits.length} collapsed.`);
+  console.table(hits.map(h => ({
+    key: h.key,
+    dropped: `${h.dropped.name} (${h.dropped.year}) [${h.dropped.industry}] id=${h.dropped.tmdb_id}`,
+    kept: `${h.kept.name} (${h.kept.year}) [${h.kept.industry}] id=${h.kept.tmdb_id}`
+  })));
+})();
+```
 
+## 3. From the Apps Script editor
 
-3. From the Apps Script editor
-------------------------------
+Open the workbook, Extensions > Apps Script, pick the function in the toolbar and press Run. Output goes to the execution log.
 
-Open the workbook, Extensions > Apps Script, pick the function in the toolbar
-and press Run. Output goes to the execution log.
+```
+checkSetup()        reports what the bridge can see - the tabs it found,
+                    the headers it mapped, whether SECRET is set. Changes
+                    nothing, so it is safe to run any time.
 
-    checkSetup()        reports what the bridge can see - the tabs it found,
-                        the headers it mapped, whether SECRET is set. Changes
-                        nothing, so it is safe to run any time.
+cleanWatchlist()    a one-off tidy: removes a second row for something
+                    already queued, and any row for something already in
+                    All Watched. Keeps the first row of each title. This
+                    one DOES write - File > Version history undoes it.
+```
 
-    cleanWatchlist()    a one-off tidy: removes a second row for something
-                        already queued, and any row for something already in
-                        All Watched. Keeps the first row of each title. This
-                        one DOES write - File > Version history undoes it.
-
-Remember that Apps Script serves the last DEPLOYED version, not the last saved
-one. Deploy > Manage deployments > pencil > New version > Deploy. Creating a
-NEW deployment gives a new URL and breaks APPS_SCRIPT_URL.
-
+Remember that Apps Script serves the last DEPLOYED version, not the last saved one. Deploy > Manage deployments > pencil > New version > Deploy. Creating a NEW deployment gives a new URL and breaks APPS_SCRIPT_URL.
 
 4. The test suites
-------------------
 
-Nine suites in assets/tests/. Seven need nothing installed; flow and modal want
-jsdom and skip cleanly without it.
+---
 
-    cd assets/tests
-    for f in *.test.mjs; do node "$f"; done
+Nine suites in assets/tests/. Seven need nothing installed; flow and modal want jsdom and skip cleanly without it.
 
-142 assertions with jsdom, 119 without. css.test.mjs is the one to trust most:
-the bugs that have actually shipped here are silent ones, and it checks the
-stylesheet against every class the JS emits.
+```
+cd assets/tests
+for f in *.test.mjs; do node "$f"; done
+```
 
+142 assertions with jsdom, 119 without. css.test.mjs is the one to trust most: the bugs that have actually shipped here are silent ones, and it checks the stylesheet against every class the JS emits.
 
 5. Where a symptom usually comes from
--------------------------------------
+
+---
 
 The page shows fewer titles than the sheet has rows.
-    De-duplication, working as intended. Run ?dupes=1 to see which rows.
+
+```
+De-duplication, working as intended. Run ?dupes=1 to see which rows.
+```
 
 A card is not green even though the film is in All Watched.
-    An identity miss: the row has no TMDB id and its title or year differs
-    from TMDB's. Fill in the Tmdb Id column for that row.
+
+```
+An identity miss: the row has no TMDB id and its title or year differs from TMDB's. Fill in the Tmdb Id column for that row.
+```
 
 An element is rendered but has no styling.
-    A class name was changed in JS and not in css/style.css. Run css.test.mjs,
-    which checks every class the code emits against every class the CSS defines.
+
+```
+A class name was changed in JS and not in css/style.css. Run css.test.mjs, which checks every class the code emits against every class the CSS defines.
+```
 
 Something looks wrong visually but the logic is right.
-    Nothing here has ever been verified in a real browser - jsdom has no layout
-    engine. Overlap, wrapping and anything measured against the viewport are
-    the likeliest source.
+
+```
+Nothing here has ever been verified in a real browser - jsdom has no layout engine. Overlap, wrapping and anything measured against the viewport are the likeliest source.
+```
